@@ -202,6 +202,7 @@ button:active{transform:scale(.98)}
 <script>
 const KEY="MealExpenseTrackerV3";
 let db={active:null,archives:[]};
+let lastComplete=false;
 
 try {
   let saved = localStorage.getItem(KEY);
@@ -413,6 +414,18 @@ function continueDebt(id){
   },"ပေးချေမယ်",false,'<label>ပေးချေမည့်ပမာဏ (ကျပ်)</label><input id="debtPay" type="number" min="1" value="'+a.remaining+'">');
 }
 
+function notify(){
+  if("Notification" in window&&Notification.permission==="granted"){
+    new Notification("🎯 Food Tracker",{body:"Target "+money(db.active.target)+" ကျပ် ပြည့်ပါပြီ — ငွေရှင်းရန်။"});
+  }
+}
+
+function watchComplete(){
+  let c=complete();
+  if(c&&!lastComplete) notify();
+  lastComplete=c;
+}
+
 function render(){
   $("setupCard").classList.toggle("hidden",!!db.active);
   $("entryCard").classList.toggle("hidden",!db.active);
@@ -460,6 +473,7 @@ function render(){
   
   calcMonthlyTotal();
   renderArchives();
+  watchComplete();
   save();
 }
 
@@ -538,26 +552,12 @@ function requestNotification(){
   Notification.requestPermission().then(p=>alert(p==="granted"?"🔔 Notification ဖွင့်ပြီးပါပြီ။":"Notification ခွင့်ပြုချက် မရပါ။"));
 }
 
-function notify(){
-  if("Notification" in window&&Notification.permission==="granted"){
-    new Notification("🎯 Food Tracker",{body:"Target "+money(db.active.target)+" ကျပ် ပြည့်ပါပြီ — ငွေရှင်းရန်။"});
-  }
-}
-
 function resetAll(){
   openModal("⚠️ Data အားလုံးဖျက်ရန်","လက်ရှိ Cycle၊ Archive နဲ့ Backup မရှိတဲ့ browser data အားလုံးကို ဖျက်ပါမယ်။ ဒီလုပ်ဆောင်ချက်ကို ပြန်ယူလို့မရပါ။",()=>{localStorage.removeItem(KEY);location.reload()},"အားလုံးဖျက်မယ်",true);
 }
 
-// Startup
+// Startup Initialization
 $("entryDate").value=today();
-let lastComplete=false;
-function watchComplete(){
-  let c=complete();
-  if(c&&!lastComplete) notify();
-  lastComplete=c;
-}
-const oldRender=render;
-render=function(){oldRender();watchComplete()}
 render();
 </script>
 </body>
