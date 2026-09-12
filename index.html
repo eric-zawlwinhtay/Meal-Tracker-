@@ -4,27 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#2563eb">
-<title>စားသောက်စရိတ် Tracker V4</title>
+<title>စားသောက်စရိတ် Tracker V5 (Ultimate)</title>
 <style>
 :root{--p:#2563eb;--pd:#1d4ed8;--bg:#f1f5f9;--card:#ffffff;--txt:#0f172a;--muted:#64748b;--border:#e2e8f0;--ok:#10b981;--warn:#f59e0b;--danger:#ef4444}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--txt);font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Noto Sans Myanmar",sans-serif;padding:14px}
-.app{max-width:580px;margin:auto}
+.app{max-width:600px;margin:auto}
 .card{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:18px;margin:12px 0;box-shadow:0 8px 20px #0000000a}
 .hidden{display:none !important}
 .header{text-align:center}
-.title{font-size:1.3rem;font-weight:800}
+.title{font-size:1.35rem;font-weight:800}
 .sub,.muted{color:var(--muted);font-size:.84rem;line-height:1.45}
 .progress{background:#eff6ff;border:1px solid #bfdbfe;border-radius:16px;padding:15px;margin-top:14px}
 .progressTop{display:flex;justify-content:space-between;align-items:flex-end}
-.current{font-size:2rem;font-weight:850;color:var(--p)}
-.target{font-size:.82rem;color:var(--muted);font-weight:700}
+.current{font-size:2.1rem;font-weight:850;color:var(--p)}
+.target{font-size:.84rem;color:var(--muted);font-weight:700}
 .bar{height:14px;background:#cbd5e1;border-radius:99px;overflow:hidden;margin:10px 0}
 .fill{height:100%;width:0;background:var(--p);transition:width .3s ease-in-out}
-.stats{display:flex;justify-content:space-between;font-size:.82rem;font-weight:700}
+.stats{display:flex;justify-content:space-between;font-size:.82rem;font-weight:700;color:var(--muted)}
+.avgSpend{margin-top:8px;padding-top:8px;border-top:1px stroke #bfdbfe;font-size:.82rem;font-weight:800;color:var(--p);text-align:right}
 label{display:block;font-size:.84rem;font-weight:750;margin:10px 0 5px}
-input{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:11px;background:#f8fafc;font-size:1rem;outline:0}
-input:focus{border-color:var(--p);background:white}
+input,select{width:100%;padding:11px 12px;border:1.5px solid var(--border);border-radius:11px;background:#f8fafc;font-size:1rem;outline:0}
+input:focus,select:focus{border-color:var(--p);background:white}
 .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:7px;margin:8px 0 12px}
 .quick button,.btn{border:0;border-radius:10px;padding:10px;cursor:pointer;font-weight:750;transition:all .15s ease}
@@ -36,6 +37,8 @@ button:active{transform:scale(.98)}
 .warning{background:var(--warn);color:#78350f}
 .danger{background:var(--danger);color:#fff}
 .secondary{background:#e2e8f0;color:var(--txt)}
+.dateBtns{display:flex;gap:6px;margin-top:6px}
+.dateBtns button{padding:6px 12px;font-size:.78rem;border:1px solid var(--border);background:#fff;border-radius:8px;cursor:pointer;font-weight:700}
 .notice{display:none;padding:15px;border-radius:15px;background:#fff3cd;border:2px solid var(--warn);text-align:center;margin-top:12px}
 .notice.show{display:block}
 .notice.ok{background:#ecfdf5;border-color:#6ee7b7}
@@ -56,6 +59,7 @@ button:active{transform:scale(.98)}
 .archive.debt{background:#fef2f2;border-color:#fecaca}
 .archiveHead{display:flex;justify-content:space-between;gap:8px;font-weight:800}
 .archiveInfo{font-size:.78rem;color:var(--muted);line-height:1.5;margin-top:5px}
+.summaryBox{background:#f8fafc;border:1px dashed var(--p);border-radius:12px;padding:12px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center}
 .row{display:flex;gap:8px;flex-wrap:wrap}
 .row>*{flex:1;min-width:130px}
 .toolbar{display:grid;grid-template-columns:1fr 1fr;gap:8px}
@@ -84,7 +88,7 @@ button:active{transform:scale(.98)}
 <div class="app">
 
 <div class="card header">
-  <div class="title">🍱 စားသောက်စရိတ် Tracker V4</div>
+  <div class="title">🍱 စားသောက်စရိတ် Tracker V5</div>
   <div class="sub">စားတဲ့နေ့ပဲ မှတ်ပါ။ Target ပြည့်တဲ့အချိန်ကို အလိုအလျောက်သိပေးပါမယ်။</div>
 
   <div id="progress" class="progress">
@@ -93,7 +97,11 @@ button:active{transform:scale(.98)}
       <div id="targetLabel" class="target">Target: 10,000 ကျပ်</div>
     </div>
     <div class="bar"><div id="fill" class="fill"></div></div>
-    <div class="stats"><span id="count">စားပြီး 0 ရက်</span><span id="percent">0%</span></div>
+    <div class="stats">
+      <span id="count">စားပြီး 0 ရက်</span>
+      <span id="percent">0%</span>
+    </div>
+    <div id="avgSpend" class="avgSpend">၁ ရက် ပျှမ်းမျှ - 0 ကျပ်</div>
   </div>
 
   <div id="notice" class="notice">
@@ -115,26 +123,34 @@ button:active{transform:scale(.98)}
   <div class="row" style="margin-top:12px">
     <button class="btn primary" onclick="startCycle()">🚀 Cycle စတင်မယ်</button>
   </div>
-  <div class="muted" style="margin-top:8px">Cycle မစရသေးခင် ဒီနေရာမှာ Target ကို ပြင်နိုင်ပါတယ်။</div>
 </div>
 
 <div id="entryCard" class="card hidden">
   <div class="sectionTitle" id="entryTitle">➕ စားခဲ့တဲ့နေ့ ထည့်ရန်</div>
-  <label>ရက်စွဲ</label><input id="entryDate" type="date">
-  <label>ငွေပမာဏ (ကျပ်)</label><input id="entryAmount" type="number" min="1" value="2000">
+  
+  <label>ရက်စွဲ</label>
+  <input id="entryDate" type="date">
+  <div class="dateBtns">
+    <button type="button" onclick="setQuickDate(0)">ဒီနေ့</button>
+    <button type="button" onclick="setQuickDate(-1)">မနေ့က</button>
+  </div>
+
+  <label>ငွေပမာဏ (ကျပ်)</label>
+  <input id="entryAmount" type="number" min="1" value="2000">
   <div class="quick">
     <button onclick="setAmount(1500)">1,500</button>
     <button onclick="setAmount(2000)">2,000</button>
     <button onclick="setAmount(2500)">2,500</button>
     <button onclick="setAmount(3000)">3,000</button>
   </div>
-  <label>မှတ်ချက် (မထည့်လည်းရ)</label><input id="entryNote" placeholder="ဥပမာ - အထူးဟင်း">
+  
+  <label>မှတ်ချက် (မထည့်လည်းရ)</label>
+  <input id="entryNote" placeholder="ဥပမာ - အထူးဟင်း / ဆိုင်အမည်">
   
   <div class="row" style="margin-top:10px">
     <button id="saveBtn" class="btn primary" onclick="saveEntry()">🍱 စားပြီး မှတ်မယ်</button>
     <button id="cancelEditBtn" class="btn secondary hidden" onclick="resetForm()">မလုပ်တော့ပါ</button>
   </div>
-  <div class="muted" style="margin-top:8px">မစားတဲ့နေ့ဆို ဒီနေရာမှာ ဘာမှမထည့်ပါနဲ့။ စုစုပေါင်းထဲ မပါပါဘူး။</div>
 </div>
 
 <div id="activeCard" class="card hidden">
@@ -143,6 +159,15 @@ button:active{transform:scale(.98)}
 </div>
 
 <div class="card">
+  <div class="sectionTitle">📊 စရိတ်ချုပ် Dashboard</div>
+  <div class="summaryBox">
+    <div>
+      <div style="font-size:0.78rem;color:var(--muted);font-weight:700">ဒီလ စုစုပေါင်း သုံးစွဲမှု</div>
+      <div id="monthTotalDisplay" style="font-size:1.25rem;font-weight:850;color:var(--p)">0 ကျပ်</div>
+    </div>
+    <button class="btn secondary" style="padding:6px 12px;font-size:0.8rem" onclick="exportCSV()">📊 Excel/CSV ထုတ်မယ်</button>
+  </div>
+
   <div class="sectionTitle">📁 ပြီးစီးခဲ့သော Cycle များ</div>
   <div id="archives"></div>
 </div>
@@ -155,10 +180,9 @@ button:active{transform:scale(.98)}
   </div>
   <input id="importFile" type="file" accept=".json,application/json" style="display:none" onchange="importData(event)">
   <div class="row" style="margin-top:8px">
-    <button class="btn secondary" onclick="requestNotification()">🔔 Browser Notification ဖွင့်မယ်</button>
+    <button class="btn secondary" onclick="requestNotification()">🔔 Notification ဖွင့်မယ်</button>
     <button class="btn danger" onclick="resetAll()">🗑️ Data အားလုံးဖျက်မယ်</button>
   </div>
-  <div class="muted" style="margin-top:8px">Backup ဖိုင်ကို သိမ်းထားရင် Browser ပြောင်းသုံးတဲ့အခါ data ပြန်ထည့်နိုင်ပါတယ်။</div>
 </div>
 
 </div>
@@ -177,21 +201,55 @@ button:active{transform:scale(.98)}
 
 <script>
 const KEY="MealExpenseTrackerV3";
-let db=JSON.parse(localStorage.getItem(KEY)||"null")||{active:null,archives:[]};
+let db={active:null,archives:[]};
+
+try {
+  let saved = localStorage.getItem(KEY);
+  if(saved) db = JSON.parse(saved);
+} catch(e) {
+  db = {active:null,archives:[]};
+}
+
 let callback=null;
 let editingEntryId=null;
 
 function $(id){return document.getElementById(id)}
 function money(n){return Number(n||0).toLocaleString("en-US")}
-function today(){let d=new Date();d.setMinutes(d.getMinutes()-d.getTimezoneOffset());return d.toISOString().slice(0,10)}
+function today(){
+  let d=new Date();
+  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  return d.toISOString().slice(0,10);
+}
+
+function setQuickDate(offsetDays){
+  let d = new Date();
+  d.setDate(d.getDate() + offsetDays);
+  d.setMinutes(d.getMinutes()-d.getTimezoneOffset());
+  $("entryDate").value = d.toISOString().slice(0,10);
+}
+
 function fmt(s){
   if(!s) return "";
   let d=new Date(s+"T00:00:00");
   return d.toLocaleDateString("en-GB",{day:"2-digit",month:"short",year:"numeric"});
 }
-function save(){localStorage.setItem(KEY,JSON.stringify(db))}
-function total(){return db.active?db.active.entries.reduce((a,x)=>a+Number(x.amount||0),0):0}
-function complete(){return db.active&&total()>=db.active.target}
+
+function save(){
+  try {
+    localStorage.setItem(KEY,JSON.stringify(db));
+  } catch(e) {
+    console.error("Storage save error", e);
+  }
+}
+
+function total(){
+  return (db.active && Array.isArray(db.active.entries)) ? db.active.entries.reduce((a,x)=>a+Number(x.amount||0),0) : 0;
+}
+
+function complete(){
+  return db.active && total() >= db.active.target;
+}
+
 function setAmount(n){$("entryAmount").value=n}
 
 function openModal(title,text,fn,okText="အတည်ပြုမယ်",danger=false,body=""){
@@ -203,12 +261,19 @@ function openModal(title,text,fn,okText="အတည်ပြုမယ်",danger=
   callback=fn;
   $("modal").classList.add("show");
 }
+
 function closeModal(){callback=null;$("modal").classList.remove("show")}
 function modalOK(){let f=callback;closeModal();if(f)f()}
 
 function startCycle(){
-  let target=Number($("target").value);
-  if(target<=0){alert("Target ပမာဏ မှန်ကန်စွာထည့်ပါ။");return}
+  let targetVal = $("target").value;
+  let target = Number(targetVal);
+
+  if(!targetVal || isNaN(target) || target <= 0){
+    alert("Target ပမာဏ မှန်ကန်စွာထည့်ပါ။");
+    return;
+  }
+
   if(db.active){
     openModal("Cycle အသစ်စမလား?","လက်ရှိ Cycle ကို မပြီးသေးဘဲ အသစ်စရင် လက်ရှိစာရင်းကို archive ထဲသိမ်းထားပါမယ်။",()=>{
       archiveCurrent("ABANDONED");
@@ -218,9 +283,17 @@ function startCycle(){
   }
   createCycle(target);
 }
+
 function createCycle(target){
-  db.active={id:Date.now(),food:$("food").value.trim()||"အစားအစာ",target,created:today(),entries:[]};
-  save();render();
+  db.active={
+    id:Date.now(),
+    food:$("food").value.trim()||"အစားအစာ",
+    target:target,
+    created:today(),
+    entries:[]
+  };
+  save();
+  render();
 }
 
 function saveEntry(){
@@ -302,7 +375,10 @@ function openPayment(){
 }
 
 function confirmPayment(){
-  let t=total(), pay=Number($("payAmount")?.value||0);
+  let t=total();
+  let payInput = $("payAmount");
+  let pay = payInput ? Number(payInput.value) : t;
+  
   if(pay<=0){alert("ပေးချေမည့်ပမာဏထည့်ပါ။");return}
   if(pay>t){alert("ကျသင့်ငွေထက် ပိုမပေးနိုင်ပါ။");return}
   let remain=t-pay;
@@ -328,7 +404,9 @@ function deleteArchive(id){
 function continueDebt(id){
   let a=db.archives.find(x=>x.id===id);if(!a||!a.remaining)return;
   openModal("အကြွေးရှင်းရန်","ကျန်ငွေ "+money(a.remaining)+" ကျပ် ရှိပါတယ်။ ပေးချေမည့်ပမာဏကို ထည့်ပါ။",()=>{
-    let p=Number($("debtPay")?.value||0);if(p<=0||p>a.remaining){alert("မှန်ကန်သောပမာဏထည့်ပါ။");return}
+    let debtInput = $("debtPay");
+    let p = debtInput ? Number(debtInput.value) : 0;
+    if(p<=0||p>a.remaining){alert("မှန်ကန်သောပမာဏထည့်ပါ။");return}
     a.remaining-=p;a.paid=(a.paid||0)+p;
     if(a.remaining===0)a.type="PAID";
     save();render();
@@ -346,8 +424,12 @@ function render(){
     $("targetLabel").textContent="Target: "+money(db.active.target)+" ကျပ်";
     $("fill").style.width=p+"%";
     $("percent").textContent=p+"%";
-    $("count").textContent="စားပြီး "+db.active.entries.length+" ရက်";
+    let daysCount = db.active.entries.length;
+    $("count").textContent="စားပြီး "+daysCount+" ရက်";
     
+    let avg = daysCount > 0 ? Math.round(t / daysCount) : 0;
+    $("avgSpend").textContent = "၁ ရက် ပျှမ်းမျှ - " + money(avg) + " ကျပ်";
+
     let isDone=complete();
     $("notice").classList.toggle("show",isDone);
     $("notice").classList.toggle("ok",isDone);
@@ -372,15 +454,39 @@ function render(){
     $("fill").style.width="0%";
     $("percent").textContent="0%";
     $("count").textContent="စားပြီး 0 ရက်";
+    $("avgSpend").textContent="၁ ရက် ပျှမ်းမျှ - 0 ကျပ်";
     $("notice").classList.remove("show");
   }
+  
+  calcMonthlyTotal();
   renderArchives();
   save();
 }
 
+function calcMonthlyTotal(){
+  let thisMonth = today().slice(0,7);
+  let totalSpent = 0;
+
+  if(db.active && Array.isArray(db.active.entries)){
+    db.active.entries.forEach(e=>{
+      if(e.date && e.date.startsWith(thisMonth)) totalSpent += Number(e.amount||0);
+    });
+  }
+
+  if(Array.isArray(db.archives)){
+    db.archives.forEach(a=>{
+      if(a.closed && a.closed.startsWith(thisMonth)){
+        totalSpent += Number(a.total||0);
+      }
+    });
+  }
+
+  $("monthTotalDisplay").textContent = money(totalSpent) + " ကျပ်";
+}
+
 function renderArchives(){
   let h=$("archives");
-  if(!db.archives.length){h.innerHTML='<div class="empty">Cycle ဟောင်း မရှိသေးပါ။</div>';return}
+  if(!db.archives || !db.archives.length){h.innerHTML='<div class="empty">Cycle ဟောင်း မရှိသေးပါ။</div>';return}
   h.innerHTML=db.archives.map(a=>{
     let cls=a.type==="PAID"?"paid":(a.type==="DEBT"||a.type==="PARTIAL"?"debt":"");
     let status=a.type==="PAID"?'<span class="badge ok">ရှင်းပြီး</span>':a.type==="PARTIAL"?'<span class="badge debt">တစ်စိတ်တစ်ပိုင်း</span>':a.type==="DEBT"?'<span class="badge debt">အကြွေး</span>':'<span class="badge">ပိတ်ထား</span>';
@@ -389,6 +495,25 @@ function renderArchives(){
     let btn=a.remaining?'<button class="btn warning" style="margin-top:8px;width:100%" onclick="continueDebt('+a.id+')">💵 အကြွေးရှင်းမယ်</button>':'';
     return '<div class="archive '+cls+'"><div class="archiveHead"><span>🍱 '+(a.food||"အစားအစာ")+'</span>'+status+'</div><div class="archiveInfo">'+fmt(a.created)+' → '+fmt(a.closed)+'<br>စားပြီး '+a.entries+' ရက် · စုစုပေါင်း '+money(a.total)+' ကျပ် / Target '+money(a.target)+' ကျပ်'+pay+rem+'</div>'+btn+'<button class="mini" style="margin-top:7px" onclick="deleteArchive('+a.id+')">ဖျက်မယ်</button></div>';
   }).join("");
+}
+
+function exportCSV(){
+  let rows = [["Type", "Food", "Date", "Amount", "Note"]];
+  
+  if(db.active && Array.isArray(db.active.entries)){
+    db.active.entries.forEach(e=>{
+      rows.push(["Active", db.active.food, e.date, e.amount, e.note||""]);
+    });
+  }
+
+  let csvContent = "data:text/csv;charset=utf-8,\uFEFF" + rows.map(e => e.join(",")).join("\n");
+  let encodedUri = encodeURI(csvContent);
+  let link = document.createElement("a");
+  link.setAttribute("href", encodedUri);
+  link.setAttribute("download", "meal_expenses_"+today()+".csv");
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 }
 
 function exportData(){
@@ -401,7 +526,7 @@ function importData(e){
   let r=new FileReader();r.onload=()=>{
     try{
       let x=JSON.parse(r.result);
-      if(!x||!Array.isArray(x.archives))throw 0;
+      if(!x || typeof x !== "object") throw 0;
       openModal("Backup ပြန်ထည့်ရန်","လက်ရှိ data ကို Backup data နဲ့ အစားထိုးပါမယ်။ ဆက်လုပ်မလား?",()=>{db=x;save();render()},"ပြန်ထည့်မယ်",true);
     }catch(err){alert("Backup ဖိုင်မမှန်ပါ။")}
   };
@@ -423,7 +548,7 @@ function resetAll(){
   openModal("⚠️ Data အားလုံးဖျက်ရန်","လက်ရှိ Cycle၊ Archive နဲ့ Backup မရှိတဲ့ browser data အားလုံးကို ဖျက်ပါမယ်။ ဒီလုပ်ဆောင်ချက်ကို ပြန်ယူလို့မရပါ။",()=>{localStorage.removeItem(KEY);location.reload()},"အားလုံးဖျက်မယ်",true);
 }
 
-// Initial Call
+// Startup
 $("entryDate").value=today();
 let lastComplete=false;
 function watchComplete(){
