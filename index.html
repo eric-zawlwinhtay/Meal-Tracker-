@@ -190,7 +190,7 @@
             margin-left: 4px;
         }
 
-        input[type="date"], input[type="number"] {
+        input[type="date"], input[type="number"], input[type="text"] {
             width: 100%;
             padding: 12px 14px;
             border-radius: 12px;
@@ -337,8 +337,8 @@
         .btn-action {
             border: none;
             border-radius: 8px;
-            padding: 6px 12px;
-            font-size: 0.78rem;
+            padding: 6px 10px;
+            font-size: 0.75rem;
             font-weight: 600;
             cursor: pointer;
         }
@@ -346,6 +346,11 @@
         .btn-pay-single {
             background: var(--ios-success);
             color: white;
+        }
+
+        .btn-edit {
+            background: rgba(0, 122, 255, 0.12);
+            color: var(--ios-primary);
         }
 
         .empty-state {
@@ -524,6 +529,34 @@
     </div>
 </div>
 
+<!-- Modal Edit Item -->
+<div class="modal-overlay" id="editItemModal">
+    <div class="modal-card">
+        <div class="modal-header">✏️ မှတ်တမ်း ပြင်ဆင်ရန်</div>
+        <div class="modal-sub">မစားခဲ့သော သို့မဟုတ် မှားယွင်းနေသော ပမာဏကို ပြင်နိုင်ပါသည်။ (ဝ ကျပ် ထည့်ပါက မှတ်တမ်း အကျိုးသက်ရောက်မှု မရှိတော့ပါ)</div>
+        
+        <div class="form-group">
+            <label for="editDateInput">ရက်စွဲ</label>
+            <input type="date" id="editDateInput">
+        </div>
+
+        <div class="form-group">
+            <label for="editAmountInput">ငွေပမာဏ (ကျပ်)</label>
+            <input type="number" id="editAmountInput" placeholder="0">
+        </div>
+
+        <div class="form-group">
+            <label for="editNoteInput">မှတ်ချက်</label>
+            <input type="text" id="editNoteInput" placeholder="မှတ်ချက်">
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-primary btn-success" id="btnConfirmEdit">ပြင်ဆင်မှု သိမ်းမည်</button>
+            <button class="btn-primary btn-secondary" id="btnCloseEdit">မလုပ်တော့ပါ</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Alert Info -->
 <div class="modal-overlay" id="infoModal">
     <div class="modal-card">
@@ -541,6 +574,7 @@
         let entries = [];
         let cycleArchives = [];
         let targetPayDebtId = null;
+        let targetEditItemId = null;
 
         try {
             entries = JSON.parse(localStorage.getItem('foodEntries')) || [];
@@ -565,7 +599,7 @@
             const dateVal = document.getElementById('entryDate').value;
             const amountVal = parseInt(document.getElementById('entryAmount').value);
 
-            if (!dateVal || isNaN(amountVal) || amountVal <= 0) {
+            if (!dateVal || isNaN(amountVal) || amountVal < 0) {
                 showInfoModal("အသိပေးချက်", "ကျေးဇူးပြု၍ ရက်စွဲနှင့် ငွေပမာဏ မှန်ကန်စွာ ထည့်သွင်းပေးပါ။");
                 return;
             }
@@ -745,6 +779,46 @@
             saveAndRender();
         });
 
+        // Edit Item Modal Logic
+        function openEditModal(id) {
+            targetEditItemId = id;
+            const item = entries.find(e => e.id === id);
+            if (!item) return;
+
+            document.getElementById('editDateInput').value = item.date;
+            document.getElementById('editAmountInput').value = item.amount;
+            document.getElementById('editNoteInput').value = item.note || '';
+            document.getElementById('editItemModal').classList.add('active');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editItemModal').classList.remove('active');
+            targetEditItemId = null;
+        }
+
+        document.getElementById('btnCloseEdit').addEventListener('click', closeEditModal);
+
+        document.getElementById('btnConfirmEdit').addEventListener('click', function() {
+            const itemIdx = entries.findIndex(e => e.id === targetEditItemId);
+            if (itemIdx === -1) return;
+
+            const newDate = document.getElementById('editDateInput').value;
+            const newAmount = parseInt(document.getElementById('editAmountInput').value);
+            const newNote = document.getElementById('editNoteInput').value;
+
+            if (!newDate || isNaN(newAmount) || newAmount < 0) {
+                showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ရက်စွဲနှင့် ငွေပမာဏ ထည့်သွင်းပေးပါ။");
+                return;
+            }
+
+            entries[itemIdx].date = newDate;
+            entries[itemIdx].amount = newAmount;
+            entries[itemIdx].note = newNote || 'ပြင်ဆင်ပြီး';
+
+            closeEditModal();
+            saveAndRender();
+        });
+
         document.getElementById('btnAddEntry').addEventListener('click', addEntry);
 
         document.querySelectorAll('.quick-amounts .btn-quick[data-amount]').forEach(btn => {
@@ -799,6 +873,7 @@
                         </div>
                         <div class="item-right">
                             <span class="item-amount ${item.isDebt ? 'debt-text' : ''}">+${item.amount.toLocaleString()} ကျပ်</span>
+                            <button class="btn-action btn-edit" data-id="${item.id}">ပြင်ရန်</button>
                             ${item.isDebt ? `<button class="btn-action btn-pay-single" data-id="${item.id}">ငွေရှင်းမည်</button>` : ''}
                         </div>
                     </div>
@@ -845,6 +920,13 @@
                 btn.addEventListener('click', function () {
                     const id = parseInt(this.getAttribute('data-id'));
                     openSingleDebtModal(id);
+                });
+            });
+
+            document.querySelectorAll('.btn-edit').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    openEditModal(id);
                 });
             });
         }
