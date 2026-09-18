@@ -3,7 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Meal Expense Tracker - iOS Edition</title>
+    <title>Meal Expense Tracker</title>
+    
+    <!-- PWA Web App Meta Tags for Android -->
+    <meta name="theme-color" content="#007AFF">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIk1lYWwgRXhwZW5zZSBUcmFja2VyIiwKICAic2hvcnRfbmFtZSI6ICJNZWFsIFRyYWNrZXIiLAogICJzdGFydF91cmwiOiAiLiIsCiAgImRpc3BsYXkiOiAic3RhbmRhbG9uZSIsCiAgImJhY2tncm91bmRfY29sb3IiOiAiI0YyRjJGNyIsCiAgInRoZW1lX2NvbG9yIjogIiMwMDdBRkYiCn0=">
+
     <style>
         :root {
             --ios-primary: #007AFF;
@@ -30,7 +37,7 @@
 
         * {
             box-sizing: border-box;
-            font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
             margin: 0;
             padding: 0;
             -webkit-tap-highlight-color: transparent;
@@ -39,7 +46,7 @@
         body {
             background-color: var(--ios-bg);
             color: var(--ios-text);
-            padding: 16px 12px;
+            padding: 12px;
             display: flex;
             justify-content: center;
             min-height: 100vh;
@@ -47,31 +54,31 @@
 
         .container {
             width: 100%;
-            max-width: 440px;
+            max-width: 480px;
             display: flex;
             flex-direction: column;
-            gap: 16px;
+            gap: 14px;
+            padding-bottom: 24px;
         }
 
-        /* iOS Glassmorphic Card */
+        /* Glassmorphic Card */
         .card {
             background: var(--ios-card-bg);
             backdrop-filter: var(--ios-blur);
             -webkit-backdrop-filter: var(--ios-blur);
             border-radius: 20px;
-            padding: 20px;
+            padding: 18px;
             box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);
             border: 1px solid var(--ios-border);
-            transition: transform 0.2s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
         .header {
             text-align: center;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
         }
 
         .title {
-            font-size: 1.25rem;
+            font-size: 1.2rem;
             font-weight: 700;
             letter-spacing: -0.4px;
             color: var(--ios-text);
@@ -82,17 +89,16 @@
         }
 
         .subtitle {
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             color: var(--ios-subtext);
             margin-top: 2px;
-            font-weight: 400;
         }
 
         /* Progress Card */
         .progress-box {
             background: rgba(0, 122, 255, 0.06);
             border-radius: 16px;
-            padding: 16px;
+            padding: 14px;
             border: 1px solid rgba(0, 122, 255, 0.12);
         }
 
@@ -100,18 +106,18 @@
             display: flex;
             justify-content: space-between;
             align-items: baseline;
-            margin-bottom: 12px;
+            margin-bottom: 10px;
         }
 
         .amount-current {
-            font-size: 2.2rem;
+            font-size: 2rem;
             font-weight: 800;
             letter-spacing: -0.5px;
             color: var(--ios-primary);
         }
 
         .amount-target {
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             font-weight: 600;
             color: var(--ios-subtext);
         }
@@ -122,35 +128,34 @@
             background: rgba(120, 120, 128, 0.16);
             border-radius: 999px;
             overflow: hidden;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
         }
 
         .progress-bar-fill {
             height: 100%;
             background: var(--ios-primary);
             width: 0%;
-            transition: width 0.5s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.3s;
+            transition: width 0.4s ease, background-color 0.3s;
             border-radius: 999px;
         }
 
         .status-info {
             display: flex;
             justify-content: space-between;
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             color: var(--ios-subtext);
             font-weight: 500;
         }
 
-        /* iOS Alert Banner */
+        /* Alert Banner */
         .alert-banner {
             background: rgba(255, 149, 0, 0.12);
             border: 1px solid var(--ios-warning);
             border-radius: 16px;
-            padding: 16px;
+            padding: 14px;
             text-align: center;
             display: none;
-            margin-top: 14px;
-            animation: iosSpring 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            margin-top: 12px;
         }
 
         .alert-banner.active {
@@ -160,15 +165,14 @@
         .alert-title {
             color: var(--ios-warning);
             font-weight: 700;
-            font-size: 1.05rem;
+            font-size: 1rem;
             margin-bottom: 4px;
         }
 
         .alert-sub {
             color: var(--ios-text);
-            font-size: 0.85rem;
-            margin-bottom: 14px;
-            opacity: 0.9;
+            font-size: 0.82rem;
+            margin-bottom: 12px;
         }
 
         .alert-actions {
@@ -177,47 +181,39 @@
             gap: 8px;
         }
 
-        /* iOS Input Style */
+        /* Form Styling */
         .form-group {
             display: flex;
             flex-direction: column;
             gap: 6px;
-            margin-bottom: 14px;
+            margin-bottom: 12px;
         }
 
         label {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             font-weight: 600;
             text-transform: uppercase;
-            letter-spacing: 0.2px;
             color: var(--ios-subtext);
             margin-left: 4px;
         }
 
         input[type="date"], input[type="number"] {
             width: 100%;
-            padding: 12px 16px;
+            padding: 12px 14px;
             border-radius: 12px;
             border: 1px solid var(--ios-border);
             font-size: 1rem;
             outline: none;
             background: rgba(118, 118, 128, 0.08);
             color: var(--ios-text);
-            transition: background 0.2s, border-color 0.2s;
-            -webkit-appearance: none;
         }
 
-        input:focus {
-            background: rgba(118, 118, 128, 0.14);
-            border-color: var(--ios-primary);
-        }
-
-        /* iOS Quick Action Segment Buttons */
+        /* Quick Action Buttons */
         .quick-amounts {
             display: grid;
             grid-template-columns: repeat(4, 1fr);
-            gap: 8px;
-            margin-bottom: 16px;
+            gap: 6px;
+            margin-bottom: 14px;
             background: rgba(118, 118, 128, 0.12);
             padding: 3px;
             border-radius: 12px;
@@ -232,16 +228,13 @@
             font-weight: 600;
             cursor: pointer;
             color: var(--ios-text);
-            transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
         .btn-quick:active {
             background: var(--ios-card-bg);
-            box-shadow: 0 2px 8px rgba(0,0,0,0.12);
-            transform: scale(0.96);
         }
 
-        /* Buttons */
+        /* Button Base Styles */
         .btn-primary {
             width: 100%;
             background: var(--ios-primary);
@@ -249,15 +242,13 @@
             border: none;
             border-radius: 14px;
             padding: 14px;
-            font-size: 1rem;
+            font-size: 0.95rem;
             font-weight: 600;
             cursor: pointer;
-            transition: all 0.2s ease;
         }
 
         .btn-primary:active {
-            opacity: 0.7;
-            transform: scale(0.98);
+            opacity: 0.8;
         }
 
         .btn-secondary {
@@ -269,12 +260,12 @@
         .btn-warning { background: var(--ios-warning); color: white; }
         .btn-danger-confirm { background: var(--ios-danger); }
 
-        /* iOS List Styling */
+        /* List Styling */
         .history-list {
             display: flex;
             flex-direction: column;
             gap: 8px;
-            max-height: 280px;
+            max-height: 260px;
             overflow-y: auto;
         }
 
@@ -282,16 +273,15 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 14px;
+            padding: 10px 12px;
             background: rgba(118, 118, 128, 0.06);
-            border-radius: 14px;
+            border-radius: 12px;
             border: 1px solid var(--ios-border);
-            animation: fadeIn 0.3s ease;
         }
 
         .archive-card {
-            border-radius: 14px;
-            padding: 14px;
+            border-radius: 12px;
+            padding: 12px;
             margin-bottom: 8px;
         }
 
@@ -310,15 +300,15 @@
             justify-content: space-between;
             align-items: center;
             font-weight: 700;
-            font-size: 0.95rem;
-            margin-bottom: 6px;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
         }
 
         .paid-card .archive-header { color: var(--ios-success); }
         .debt-card .archive-header { color: var(--ios-danger); }
 
         .archive-details {
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             line-height: 1.4;
             color: var(--ios-text);
             opacity: 0.85;
@@ -326,25 +316,23 @@
 
         .item-date {
             font-weight: 600;
-            font-size: 0.9rem;
-            color: var(--ios-text);
+            font-size: 0.88rem;
         }
 
         .item-sub {
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             color: var(--ios-subtext);
-            margin-top: 1px;
         }
 
         .item-right {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 8px;
         }
 
         .item-amount {
             font-weight: 700;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
             color: var(--ios-primary);
         }
 
@@ -354,33 +342,24 @@
             color: var(--ios-danger);
             cursor: pointer;
             border-radius: 8px;
-            padding: 5px 10px;
-            font-size: 0.8rem;
+            padding: 4px 8px;
+            font-size: 0.78rem;
             font-weight: 600;
-            transition: background 0.2s;
-        }
-
-        .btn-delete:active {
-            background: rgba(255, 59, 48, 0.25);
         }
 
         .empty-state {
             text-align: center;
             color: var(--ios-subtext);
-            font-size: 0.85rem;
-            padding: 16px 10px;
+            font-size: 0.82rem;
+            padding: 14px;
         }
 
-        /* iOS Bottom Action Sheet & Blur Overlay */
+        /* Android Bottom Sheet Modal */
         .modal-overlay {
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
             display: none;
             justify-content: center;
             align-items: flex-end;
@@ -389,36 +368,30 @@
 
         .modal-overlay.active {
             display: flex;
-            animation: fadeIn 0.2s ease-out;
         }
 
         .modal-card {
             background: var(--ios-card-bg);
             backdrop-filter: var(--ios-blur);
-            -webkit-backdrop-filter: var(--ios-blur);
             width: 100%;
-            max-width: 440px;
-            border-top-left-radius: 24px;
-            border-top-right-radius: 24px;
-            padding: 24px 20px 32px 20px;
-            box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15);
+            max-width: 480px;
+            border-top-left-radius: 20px;
+            border-top-right-radius: 20px;
+            padding: 20px 16px 28px 16px;
             border-top: 1px solid var(--ios-border);
-            animation: slideUp 0.35s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
         .modal-header {
             font-weight: 700;
-            font-size: 1.15rem;
-            color: var(--ios-text);
+            font-size: 1.1rem;
             margin-bottom: 4px;
             text-align: center;
         }
 
         .modal-sub {
-            font-size: 0.85rem;
+            font-size: 0.82rem;
             color: var(--ios-subtext);
-            line-height: 1.4;
-            margin-bottom: 16px;
+            margin-bottom: 14px;
             text-align: center;
         }
 
@@ -426,22 +399,7 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            margin-top: 16px;
-        }
-
-        @keyframes slideUp {
-            from { transform: translateY(100%); }
-            to { transform: translateY(0); }
-        }
-
-        @keyframes iosSpring {
-            from { transform: scale(0.95); opacity: 0; }
-            to { transform: scale(1); opacity: 1; }
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; }
-            to { opacity: 1; }
+            margin-top: 14px;
         }
     </style>
 </head>
@@ -484,7 +442,7 @@
 
     <!-- Entry Form Card -->
     <div class="card">
-        <div class="title" style="font-size: 1rem; justify-content: flex-start; margin-bottom: 12px;">➕ မှတ်တမ်းသစ်ထည့်ရန်</div>
+        <div class="title" style="font-size: 0.95rem; justify-content: flex-start; margin-bottom: 10px;">➕ မှတ်တမ်းသစ်ထည့်ရန်</div>
         
         <div class="form-group">
             <label>ရက်စွဲ</label>
@@ -508,7 +466,7 @@
 
     <!-- Active Cycle History Card -->
     <div class="card">
-        <div class="title" style="font-size: 1rem; justify-content: flex-start; margin-bottom: 12px;">📜 လက်ရှိ Cycle မှတ်တမ်းများ</div>
+        <div class="title" style="font-size: 0.95rem; justify-content: flex-start; margin-bottom: 10px;">📜 လက်ရှိ Cycle မှတ်တမ်းများ</div>
         <div class="history-list" id="historyList">
             <div class="empty-state">မှတ်တမ်းများ မရှိသေးပါ။</div>
         </div>
@@ -516,14 +474,14 @@
 
     <!-- Cycle History Archive Card -->
     <div class="card">
-        <div class="title" style="font-size: 1rem; justify-content: flex-start; margin-bottom: 12px;">📁 ပြီးစီးခဲ့သော စာရင်းဟောင်းများ</div>
+        <div class="title" style="font-size: 0.95rem; justify-content: flex-start; margin-bottom: 10px;">📁 ပြီးစီးခဲ့သော စာရင်းဟောင်းများ</div>
         <div class="history-list" id="archiveHistoryList">
             <div class="empty-state">စာရင်းဟောင်း မှတ်တမ်းများ မရှိသေးပါ။</div>
         </div>
     </div>
 </div>
 
-<!-- iOS Style Payment Bottom Sheet -->
+<!-- Modal Bottom Sheet -->
 <div class="modal-overlay" id="payModal">
     <div class="modal-card">
         <div class="modal-header">💵 ငွေပေးချေမှု ပမာဏ ရွေးပါ</div>
@@ -548,7 +506,6 @@
     </div>
 </div>
 
-<!-- iOS Style Confirmation Bottom Sheet -->
 <div class="modal-overlay" id="confirmModal">
     <div class="modal-card">
         <div class="modal-header" id="confirmModalTitle">အတည်ပြုရန်</div>
