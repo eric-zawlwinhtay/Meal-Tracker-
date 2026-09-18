@@ -10,8 +10,6 @@
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon.png">
 
     <style>
         :root {
@@ -249,6 +247,7 @@
 
         .btn-success { background: var(--ios-success); color: white; }
         .btn-warning { background: var(--ios-warning); color: white; }
+        .btn-danger { background: var(--ios-danger); color: white; }
 
         .history-list {
             display: flex;
@@ -353,6 +352,11 @@
             color: var(--ios-primary);
         }
 
+        .btn-delete-small {
+            background: rgba(255, 59, 48, 0.12);
+            color: var(--ios-danger);
+        }
+
         .empty-state {
             text-align: center;
             color: var(--ios-subtext);
@@ -382,6 +386,8 @@
             border-top-right-radius: 20px;
             padding: 20px 16px 28px 16px;
             border-top: 1px solid var(--ios-border);
+            max-height: 85vh;
+            overflow-y: auto;
         }
 
         .modal-header {
@@ -403,6 +409,15 @@
             flex-direction: column;
             gap: 8px;
             margin-top: 14px;
+        }
+
+        .breakdown-list {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: 10px;
+            max-height: 250px;
+            overflow-y: auto;
         }
     </style>
 </head>
@@ -533,7 +548,7 @@
 <div class="modal-overlay" id="editItemModal">
     <div class="modal-card">
         <div class="modal-header">✏️ မှတ်တမ်း ပြင်ဆင်ရန်</div>
-        <div class="modal-sub">မစားခဲ့သော သို့မဟုတ် မှားယွင်းနေသော ပမာဏကို ပြင်နိုင်ပါသည်။ (ဝ ကျပ် ထည့်ပါက မှတ်တမ်း အကျိုးသက်ရောက်မှု မရှိတော့ပါ)</div>
+        <div class="modal-sub">မစားခဲ့သော သို့မဟုတ် မှားယွင်းနေသော ပမာဏကို ပြင်ဆင်နိုင်ပါသည်။</div>
         
         <div class="form-group">
             <label for="editDateInput">ရက်စွဲ</label>
@@ -552,7 +567,24 @@
 
         <div class="modal-actions">
             <button class="btn-primary btn-success" id="btnConfirmEdit">ပြင်ဆင်မှု သိမ်းမည်</button>
+            <button class="btn-primary btn-danger" id="btnDeleteCurrentEditItem">🗑️ ဒီမှတ်တမ်းကို လုံးဝဖျက်မည်</button>
             <button class="btn-primary btn-secondary" id="btnCloseEdit">မလုပ်တော့ပါ</button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Cycle Debt Breakdown / Detail View -->
+<div class="modal-overlay" id="debtBreakdownModal">
+    <div class="modal-card">
+        <div class="modal-header">📊 အကြွေးကျန် စာရင်း အသေးစိတ်</div>
+        <div class="modal-sub" id="debtBreakdownSub">အောက်ပါ မူလမှတ်တမ်းများမှ ပြင်ဆင်/ဖျက်ထုတ်နိုင်ပါသည်။</div>
+
+        <div class="breakdown-list" id="breakdownList">
+            <!-- Dynamic Sub-Items Here -->
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-primary btn-secondary" id="btnCloseBreakdown">ပိတ်မည်</button>
         </div>
     </div>
 </div>
@@ -575,6 +607,8 @@
         let cycleArchives = [];
         let targetPayDebtId = null;
         let targetEditItemId = null;
+        let targetEditScope = 'CURRENT'; // 'CURRENT' or 'DEBT_BREAKDOWN'
+        let activeDebtBreakdownId = null;
 
         try {
             entries = JSON.parse(localStorage.getItem('foodEntries')) || [];
@@ -668,6 +702,7 @@
                 remainingBalance: balance > 0 ? balance : 0
             });
 
+            const currentSubItems = [...entries];
             entries = [];
 
             if (balance > 0) {
@@ -676,7 +711,8 @@
                     date: todayStr,
                     amount: balance,
                     isDebt: true,
-                    note: 'ယခင် cycle မှ မရှင်းရသေးသော အကြွေးကျန်'
+                    note: 'ယခင် cycle မှ မရှင်းရသေးသော အကြွေးကျန်',
+                    subItems: currentSubItems
                 });
             }
 
@@ -696,6 +732,7 @@
                 itemCount: entries.length
             });
 
+            const currentSubItems = [...entries];
             entries = [];
 
             entries.push({
@@ -703,7 +740,8 @@
                 date: todayStr,
                 amount: totalSum,
                 isDebt: true,
-                note: 'ယခင် Cycle မှ မရှင်းရသေးသော အကြွေးကျန်'
+                note: 'ယခင် Cycle မှ မရှင်းရသေးသော အကြွေးကျန်',
+                subItems: currentSubItems
             });
 
             saveAndRender();
@@ -780,9 +818,20 @@
         });
 
         // Edit Item Modal Logic
-        function openEditModal(id) {
+        function openEditModal(id, scope = 'CURRENT') {
             targetEditItemId = id;
-            const item = entries.find(e => e.id === id);
+            targetEditScope = scope;
+
+            let item = null;
+            if (scope === 'CURRENT') {
+                item = entries.find(e => e.id === id);
+            } else if (scope === 'DEBT_BREAKDOWN') {
+                const parentDebt = entries.find(e => e.id === activeDebtBreakdownId);
+                if (parentDebt && parentDebt.subItems) {
+                    item = parentDebt.subItems.find(s => s.id === id);
+                }
+            }
+
             if (!item) return;
 
             document.getElementById('editDateInput').value = item.date;
@@ -799,9 +848,6 @@
         document.getElementById('btnCloseEdit').addEventListener('click', closeEditModal);
 
         document.getElementById('btnConfirmEdit').addEventListener('click', function() {
-            const itemIdx = entries.findIndex(e => e.id === targetEditItemId);
-            if (itemIdx === -1) return;
-
             const newDate = document.getElementById('editDateInput').value;
             const newAmount = parseInt(document.getElementById('editAmountInput').value);
             const newNote = document.getElementById('editNoteInput').value;
@@ -811,13 +857,117 @@
                 return;
             }
 
-            entries[itemIdx].date = newDate;
-            entries[itemIdx].amount = newAmount;
-            entries[itemIdx].note = newNote || 'ပြင်ဆင်ပြီး';
+            if (targetEditScope === 'CURRENT') {
+                const itemIdx = entries.findIndex(e => e.id === targetEditItemId);
+                if (itemIdx !== -1) {
+                    entries[itemIdx].date = newDate;
+                    entries[itemIdx].amount = newAmount;
+                    entries[itemIdx].note = newNote || 'ပြင်ဆင်ပြီး';
+                }
+            } else if (targetEditScope === 'DEBT_BREAKDOWN') {
+                const parentDebtIdx = entries.findIndex(e => e.id === activeDebtBreakdownId);
+                if (parentDebtIdx !== -1 && entries[parentDebtIdx].subItems) {
+                    const subIdx = entries[parentDebtIdx].subItems.findIndex(s => s.id === targetEditItemId);
+                    if (subIdx !== -1) {
+                        entries[parentDebtIdx].subItems[subIdx].date = newDate;
+                        entries[parentDebtIdx].subItems[subIdx].amount = newAmount;
+                        entries[parentDebtIdx].subItems[subIdx].note = newNote || 'ပြင်ဆင်ပြီး';
+
+                        // Recalculate parent debt amount
+                        const recalculatedSum = entries[parentDebtIdx].subItems.reduce((sum, s) => sum + s.amount, 0);
+                        entries[parentDebtIdx].amount = recalculatedSum;
+                    }
+                }
+            }
 
             closeEditModal();
             saveAndRender();
+
+            if (targetEditScope === 'DEBT_BREAKDOWN' && activeDebtBreakdownId) {
+                renderDebtBreakdownModal(activeDebtBreakdownId);
+            }
         });
+
+        // Delete Item Logic
+        document.getElementById('btnDeleteCurrentEditItem').addEventListener('click', function() {
+            if (targetEditScope === 'CURRENT') {
+                const itemIdx = entries.findIndex(e => e.id === targetEditItemId);
+                if (itemIdx !== -1) {
+                    entries.splice(itemIdx, 1);
+                }
+            } else if (targetEditScope === 'DEBT_BREAKDOWN') {
+                const parentDebtIdx = entries.findIndex(e => e.id === activeDebtBreakdownId);
+                if (parentDebtIdx !== -1 && entries[parentDebtIdx].subItems) {
+                    const subIdx = entries[parentDebtIdx].subItems.findIndex(s => s.id === targetEditItemId);
+                    if (subIdx !== -1) {
+                        entries[parentDebtIdx].subItems.splice(subIdx, 1);
+
+                        // Recalculate parent debt amount
+                        const recalculatedSum = entries[parentDebtIdx].subItems.reduce((sum, s) => sum + s.amount, 0);
+                        entries[parentDebtIdx].amount = recalculatedSum;
+
+                        if (entries[parentDebtIdx].subItems.length === 0 || recalculatedSum <= 0) {
+                            entries.splice(parentDebtIdx, 1);
+                            closeBreakdownModal();
+                        }
+                    }
+                }
+            }
+
+            closeEditModal();
+            saveAndRender();
+
+            if (targetEditScope === 'DEBT_BREAKDOWN' && activeDebtBreakdownId && entries.some(e => e.id === activeDebtBreakdownId)) {
+                renderDebtBreakdownModal(activeDebtBreakdownId);
+            }
+        });
+
+        // Breakdown Modal Logic
+        function renderDebtBreakdownModal(debtId) {
+            activeDebtBreakdownId = debtId;
+            const parentDebt = entries.find(e => e.id === debtId);
+            const listContainer = document.getElementById('breakdownList');
+
+            if (!parentDebt || !parentDebt.subItems || parentDebt.subItems.length === 0) {
+                listContainer.innerHTML = '<div class="empty-state">အသေးစိတ် မှတ်တမ်းများ မရှိပါ။</div>';
+                document.getElementById('debtBreakdownSub').innerText = `မရှင်းရသေးသော အကြွေးကျန်: ${parentDebt ? parentDebt.amount.toLocaleString() : 0} ကျပ်`;
+                return;
+            }
+
+            document.getElementById('debtBreakdownSub').innerText = `စုစုပေါင်း အကြွေးကျန်: ${parentDebt.amount.toLocaleString()} ကျပ် (${parentDebt.subItems.length} ခု)`;
+
+            listContainer.innerHTML = parentDebt.subItems.map(item => `
+                <div class="history-item">
+                    <div>
+                        <div class="item-date">${item.date}</div>
+                        <div class="item-sub">${item.note || 'စားပြီး'}</div>
+                    </div>
+                    <div class="item-right">
+                        <span class="item-amount">+${item.amount.toLocaleString()} ကျပ်</span>
+                        <button class="btn-action btn-edit-sub" data-id="${item.id}">ပြင်ရန်</button>
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.btn-edit-sub').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    openEditModal(id, 'DEBT_BREAKDOWN');
+                });
+            });
+        }
+
+        function openBreakdownModal(debtId) {
+            renderDebtBreakdownModal(debtId);
+            document.getElementById('debtBreakdownModal').classList.add('active');
+        }
+
+        function closeBreakdownModal() {
+            document.getElementById('debtBreakdownModal').classList.remove('active');
+            activeDebtBreakdownId = null;
+        }
+
+        document.getElementById('btnCloseBreakdown').addEventListener('click', closeBreakdownModal);
 
         document.getElementById('btnAddEntry').addEventListener('click', addEntry);
 
@@ -873,8 +1023,11 @@
                         </div>
                         <div class="item-right">
                             <span class="item-amount ${item.isDebt ? 'debt-text' : ''}">+${item.amount.toLocaleString()} ကျပ်</span>
-                            <button class="btn-action btn-edit" data-id="${item.id}">ပြင်ရန်</button>
-                            ${item.isDebt ? `<button class="btn-action btn-pay-single" data-id="${item.id}">ငွေရှင်းမည်</button>` : ''}
+                            ${item.isDebt 
+                                ? `<button class="btn-action btn-edit-debt-parent" data-id="${item.id}">ပြင်ရန် / အသေးစိတ်</button>
+                                   <button class="btn-action btn-pay-single" data-id="${item.id}">ငွေရှင်းမည်</button>`
+                                : `<button class="btn-action btn-edit" data-id="${item.id}">ပြင်ရန်</button>`
+                            }
                         </div>
                     </div>
                 `).join('');
@@ -926,7 +1079,14 @@
             document.querySelectorAll('.btn-edit').forEach(btn => {
                 btn.addEventListener('click', function () {
                     const id = parseInt(this.getAttribute('data-id'));
-                    openEditModal(id);
+                    openEditModal(id, 'CURRENT');
+                });
+            });
+
+            document.querySelectorAll('.btn-edit-debt-parent').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const id = parseInt(this.getAttribute('data-id'));
+                    openBreakdownModal(id);
                 });
             });
         }
