@@ -249,7 +249,6 @@
 
         .btn-success { background: var(--ios-success); color: white; }
         .btn-warning { background: var(--ios-warning); color: white; }
-        .btn-danger-confirm { background: var(--ios-danger); color: white; }
 
         .history-list {
             display: flex;
@@ -338,8 +337,8 @@
         .btn-action {
             border: none;
             border-radius: 8px;
-            padding: 5px 8px;
-            font-size: 0.75rem;
+            padding: 6px 12px;
+            font-size: 0.78rem;
             font-weight: 600;
             cursor: pointer;
         }
@@ -347,11 +346,6 @@
         .btn-pay-single {
             background: var(--ios-success);
             color: white;
-        }
-
-        .btn-delete {
-            background: rgba(255, 59, 48, 0.12);
-            color: var(--ios-danger);
         }
 
         .empty-state {
@@ -530,14 +524,13 @@
     </div>
 </div>
 
-<!-- Modal Confirm -->
-<div class="modal-overlay" id="confirmModal">
+<!-- Modal Alert Info -->
+<div class="modal-overlay" id="infoModal">
     <div class="modal-card">
-        <div class="modal-header" id="confirmModalTitle">အတည်ပြုရန်</div>
-        <div class="modal-sub" id="confirmModalText">ဤလုပ်ဆောင်ချက်ကို ဆက်လက် လုပ်ဆောင်မှာ သေချာပါသလား?</div>
+        <div class="modal-header" id="infoModalTitle">အသိပေးချက်</div>
+        <div class="modal-sub" id="infoModalText">အကြောင်းအရာ</div>
         <div class="modal-actions">
-            <button class="btn-primary" id="confirmModalActionBtn">အတည်ပြုမည်</button>
-            <button class="btn-primary btn-secondary" id="btnCloseConfirm">မလုပ်တော့ပါ</button>
+            <button class="btn-primary" id="btnCloseInfo">နားလည်ပါပြီ</button>
         </div>
     </div>
 </div>
@@ -547,7 +540,6 @@
         const TARGET = 10000;
         let entries = [];
         let cycleArchives = [];
-        let onConfirmCallback = null;
         let targetPayDebtId = null;
 
         try {
@@ -574,7 +566,7 @@
             const amountVal = parseInt(document.getElementById('entryAmount').value);
 
             if (!dateVal || isNaN(amountVal) || amountVal <= 0) {
-                showConfirmModal("အသိပေးချက်", "ကျေးဇူးပြု၍ ရက်စွဲနှင့် ငွေပမာဏ မှန်ကန်စွာ ထည့်သွင်းပေးပါ။", null, false);
+                showInfoModal("အသိပေးချက်", "ကျေးဇူးပြု၍ ရက်စွဲနှင့် ငွေပမာဏ မှန်ကန်စွာ ထည့်သွင်းပေးပါ။");
                 return;
             }
 
@@ -590,33 +582,15 @@
             document.getElementById('entryAmount').value = 2000;
         }
 
-        function showConfirmModal(title, message, callback, isDanger = true) {
-            document.getElementById('confirmModalTitle').innerText = title;
-            document.getElementById('confirmModalText').innerText = message;
-            onConfirmCallback = callback;
-
-            const actionBtn = document.getElementById('confirmModalActionBtn');
-            if (!callback) {
-                actionBtn.style.display = 'none';
-            } else {
-                actionBtn.style.display = 'block';
-                actionBtn.className = isDanger ? 'btn-primary btn-danger-confirm' : 'btn-primary btn-warning';
-            }
-
-            document.getElementById('confirmModal').classList.add('active');
+        function showInfoModal(title, message) {
+            document.getElementById('infoModalTitle').innerText = title;
+            document.getElementById('infoModalText').innerText = message;
+            document.getElementById('infoModal').classList.add('active');
         }
 
-        function closeConfirmModal() {
-            document.getElementById('confirmModal').classList.remove('active');
-            onConfirmCallback = null;
-        }
-
-        document.getElementById('confirmModalActionBtn').addEventListener('click', function () {
-            if (onConfirmCallback) onConfirmCallback();
-            closeConfirmModal();
+        document.getElementById('btnCloseInfo').addEventListener('click', function() {
+            document.getElementById('infoModal').classList.remove('active');
         });
-
-        document.getElementById('btnCloseConfirm').addEventListener('click', closeConfirmModal);
 
         function openPayModal() {
             const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
@@ -643,7 +617,7 @@
             const payAmount = parseInt(document.getElementById('modalPayInput').value);
 
             if (isNaN(payAmount) || payAmount <= 0) {
-                showConfirmModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ပေးချေငွေပမာဏ ထည့်သွင်းပေးပါ။", null, false);
+                showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ပေးချေငွေပမာဏ ထည့်သွင်းပေးပါ။");
                 return;
             }
 
@@ -678,34 +652,27 @@
 
         document.getElementById('btnOpenDebt').addEventListener('click', function () {
             const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
-            showConfirmModal(
-                "📌 အကြွေးမှတ်တမ်းတင်ရန်",
-                `စုစုပေါင်း ${totalSum.toLocaleString()} ကျပ်ကို မရှင်းသေးဘဲ အကြွေးအဖြစ် သယ်ဆောင်ပြီး Cycle အသစ် စတင်မှာ သေချာပါသလား?`,
-                function() {
-                    const todayStr = new Date().toISOString().slice(0, 10);
-                    
-                    cycleArchives.unshift({
-                        id: Date.now(),
-                        date: todayStr,
-                        type: 'DEBT',
-                        totalAmount: totalSum,
-                        itemCount: entries.length
-                    });
+            const todayStr = new Date().toISOString().slice(0, 10);
+            
+            cycleArchives.unshift({
+                id: Date.now(),
+                date: todayStr,
+                type: 'DEBT',
+                totalAmount: totalSum,
+                itemCount: entries.length
+            });
 
-                    entries = [];
+            entries = [];
 
-                    entries.push({
-                        id: Date.now() + 1,
-                        date: todayStr,
-                        amount: totalSum,
-                        isDebt: true,
-                        note: 'ယခင် Cycle မှ မရှင်းရသေးသော အကြွေးကျန်'
-                    });
+            entries.push({
+                id: Date.now() + 1,
+                date: todayStr,
+                amount: totalSum,
+                isDebt: true,
+                note: 'ယခင် Cycle မှ မရှင်းရသေးသော အကြွေးကျန်'
+            });
 
-                    saveAndRender();
-                },
-                false
-            );
+            saveAndRender();
         });
 
         function openSingleDebtModal(id) {
@@ -741,14 +708,13 @@
             const item = entries[itemIdx];
 
             if (isNaN(payAmount) || payAmount <= 0) {
-                showConfirmModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ပေးချေငွေပမာဏ ထည့်သွင်းပေးပါ။", null, false);
+                showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ပေးချေငွေပမာဏ ထည့်သွင်းပေးပါ။");
                 return;
             }
 
             const todayStr = new Date().toISOString().slice(0, 10);
 
             if (payAmount >= item.amount) {
-                // အကြွေးကျန်ထက် ပို သို့မဟုတ် အပြည့် ပေးချေလိုက်လျှင်
                 cycleArchives.unshift({
                     id: Date.now(),
                     date: todayStr,
@@ -760,7 +726,6 @@
                 });
                 entries.splice(itemIdx, 1);
             } else {
-                // အကြွေးကျန်အချို့ ပေးချေပြီး ကျန်ငွေကို နောက် Cycle သို့ အကြွေးကျန်အဖြစ် ထိုင်ကျန်စေမည်
                 const remainingDebt = item.amount - payAmount;
 
                 cycleArchives.unshift({
@@ -773,7 +738,6 @@
                     remainingBalance: remainingDebt
                 });
 
-                // ကျန်ရှိသော အကြွေးပမာဏကို ပြင်ဆင်လိုက်သည်
                 entries[itemIdx].amount = remainingDebt;
             }
 
@@ -836,7 +800,6 @@
                         <div class="item-right">
                             <span class="item-amount ${item.isDebt ? 'debt-text' : ''}">+${item.amount.toLocaleString()} ကျပ်</span>
                             ${item.isDebt ? `<button class="btn-action btn-pay-single" data-id="${item.id}">ငွေရှင်းမည်</button>` : ''}
-                            <button class="btn-action btn-delete btn-del-entry" data-id="${item.id}">ဖျက်မည်</button>
                         </div>
                     </div>
                 `).join('');
@@ -851,7 +814,6 @@
                             <div class="archive-card paid-card">
                                 <div class="archive-header">
                                     <span>💵 ${item.paidAmount.toLocaleString()} ကျပ် ပေးချေခဲ့ပြီး</span>
-                                    <button class="btn-action btn-delete btn-del-archive" data-id="${item.id}">ဖျက်မည်</button>
                                 </div>
                                 <div class="archive-details">
                                     <b>ရက်စွဲ:</b> ${item.date}<br>
@@ -867,7 +829,6 @@
                             <div class="archive-card debt-card">
                                 <div class="archive-header">
                                     <span>📌 အကြွေးအဖြစ် သယ်ဆောင်ခဲ့သည်</span>
-                                    <button class="btn-action btn-delete btn-del-archive" data-id="${item.id}">ဖျက်မည်</button>
                                 </div>
                                 <div class="archive-details">
                                     <b>ရက်စွဲ:</b> ${item.date}<br>
@@ -884,34 +845,6 @@
                 btn.addEventListener('click', function () {
                     const id = parseInt(this.getAttribute('data-id'));
                     openSingleDebtModal(id);
-                });
-            });
-
-            document.querySelectorAll('.btn-del-entry').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    showConfirmModal(
-                        "မှတ်တမ်းဖျက်ရန်",
-                        "ဒီမှတ်တမ်းကို ဖျက်မှာ သေချာပါသလား?",
-                        function() {
-                            entries = entries.filter(item => item.id !== id);
-                            saveAndRender();
-                        }
-                    );
-                });
-            });
-
-            document.querySelectorAll('.btn-del-archive').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    showConfirmModal(
-                        "စာရင်းဟောင်းဖျက်ရန်",
-                        "ဒီ စာရင်းဟောင်းကို ဖျက်ပစ်မှာ သေချာပါသလား?",
-                        function() {
-                            cycleArchives = cycleArchives.filter(item => item.id !== id);
-                            saveAndRender();
-                        }
-                    );
                 });
             });
         }
