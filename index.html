@@ -364,6 +364,7 @@
             padding: 14px;
         }
 
+        /* Modal Structure & z-index Adjustments */
         .modal-overlay {
             position: fixed;
             top: 0; left: 0; width: 100vw; height: 100vh;
@@ -378,6 +379,11 @@
             display: flex;
         }
 
+        /* မှတ်တမ်းပြင်ဆင်ရန် Window ကို အပေါ်ဆုံး Layer တွင် ပေါ်စေရန် */
+        #editItemModal {
+            z-index: 1100;
+        }
+
         .modal-card {
             background: var(--ios-card-bg);
             width: 100%;
@@ -386,8 +392,9 @@
             border-top-right-radius: 20px;
             padding: 20px 16px 28px 16px;
             border-top: 1px solid var(--ios-border);
-            max-height: 85vh;
+            max-height: 90vh; /* Screen အောက်ခြေ မြင်ရလွယ်စေရန် */
             overflow-y: auto;
+            box-sizing: border-box;
         }
 
         .modal-header {
@@ -409,6 +416,7 @@
             flex-direction: column;
             gap: 8px;
             margin-top: 14px;
+            padding-bottom: 12px;
         }
 
         .breakdown-list {
@@ -544,7 +552,7 @@
     </div>
 </div>
 
-<!-- Modal Edit Item -->
+<!-- Modal Edit Item (Highest z-index) -->
 <div class="modal-overlay" id="editItemModal">
     <div class="modal-card">
         <div class="modal-header">✏️ မှတ်တမ်း ပြင်ဆင်ရန်</div>
@@ -589,6 +597,22 @@
     </div>
 </div>
 
+<!-- Modal Archive Cycle Detail View -->
+<div class="modal-overlay" id="archiveDetailModal">
+    <div class="modal-card">
+        <div class="modal-header">📜 Cycle အသေးစိတ် မှတ်တမ်း</div>
+        <div class="modal-sub" id="archiveDetailSub">ပါဝင်သော စားသောက်စရိတ် ရက်အလိုက် အသေးစိတ် စာရင်း</div>
+
+        <div class="breakdown-list" id="archiveDetailList">
+            <!-- Dynamic Cycle Items Here -->
+        </div>
+
+        <div class="modal-actions">
+            <button class="btn-primary btn-secondary" id="btnCloseArchiveDetail">ပိတ်မည်</button>
+        </div>
+    </div>
+</div>
+
 <!-- Modal Alert Info -->
 <div class="modal-overlay" id="infoModal">
     <div class="modal-card">
@@ -601,499 +625,504 @@
 </div>
 
 <script>
-    document.addEventListener("DOMContentLoaded", function () {
-        const TARGET = 10000;
-        let entries = [];
-        let cycleArchives = [];
-        let targetPayDebtId = null;
-        let targetEditItemId = null;
-        let targetEditScope = 'CURRENT'; // 'CURRENT' or 'DEBT_BREAKDOWN'
-        let activeDebtBreakdownId = null;
+document.addEventListener("DOMContentLoaded", function () {
+    const TARGET = 10000;
+    let entries = [];
+    let cycleArchives = [];
+    let targetPayDebtId = null;
+    let targetEditItemId = null;
+    let targetEditScope = 'CURRENT'; // 'CURRENT' or 'DEBT_BREAKDOWN'
+    let activeDebtBreakdownId = null;
 
+    try {
+        entries = JSON.parse(localStorage.getItem('foodEntries')) || [];
+        cycleArchives = JSON.parse(localStorage.getItem('cycleArchives')) || [];
+    } catch (e) {
+        entries = [];
+        cycleArchives = [];
+    }
+
+    const entryDate = document.getElementById('entryDate');
+    if (entryDate) entryDate.valueAsDate = new Date();
+
+    function saveAndRender() {
         try {
-            entries = JSON.parse(localStorage.getItem('foodEntries')) || [];
-            cycleArchives = JSON.parse(localStorage.getItem('cycleArchives')) || [];
-        } catch (e) {
-            entries = [];
-            cycleArchives = [];
+            localStorage.setItem('foodEntries', JSON.stringify(entries));
+            localStorage.setItem('cycleArchives', JSON.stringify(cycleArchives));
+        } catch(e) {}
+        render();
+    }
+
+    function addEntry() {
+        const dateVal = document.getElementById('entryDate').value;
+        const amountVal = parseInt(document.getElementById('entryAmount').value);
+
+        if (!dateVal || isNaN(amountVal) || amountVal < 0) {
+            showInfoModal("အသိပေးချက်", "ကျေးဇူးပြု၍ ရက်စွဲနှင့် ငွေပမာဏ မှန်ကန်စွာ ထည့်သွင်းပေးပါ။");
+            return;
         }
 
-        const entryDate = document.getElementById('entryDate');
-        if (entryDate) entryDate.valueAsDate = new Date();
+        entries.unshift({
+            id: Date.now(),
+            date: dateVal,
+            amount: amountVal,
+            note: 'စားပြီး'
+        });
 
-        function saveAndRender() {
-            try {
-                localStorage.setItem('foodEntries', JSON.stringify(entries));
-                localStorage.setItem('cycleArchives', JSON.stringify(cycleArchives));
-            } catch(e) {}
-            render();
+        saveAndRender();
+        document.getElementById('entryDate').valueAsDate = new Date();
+        document.getElementById('entryAmount').value = 2000;
+    }
+
+    function showInfoModal(title, message) {
+        document.getElementById('infoModalTitle').innerText = title;
+        document.getElementById('infoModalText').innerText = message;
+        document.getElementById('infoModal').classList.add('active');
+    }
+
+    document.getElementById('btnCloseInfo').addEventListener('click', function() {
+        document.getElementById('infoModal').classList.remove('active');
+    });
+
+    function openPayModal() {
+        const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
+        document.getElementById('modalSubInfo').innerText = `စုစုပေါင်း ကျသင့်ငွေ ${totalSum.toLocaleString()} ကျပ် ရှိပါသည်။`;
+        document.getElementById('modalPayInput').value = totalSum;
+        document.getElementById('btnFullAmount').innerText = totalSum.toLocaleString();
+        document.getElementById('payModal').classList.add('active');
+    }
+
+    function closePayModal() {
+        document.getElementById('payModal').classList.remove('active');
+    }
+
+    document.getElementById('btnOpenPay').addEventListener('click', openPayModal);
+    document.getElementById('btnClosePay').addEventListener('click', closePayModal);
+
+    document.getElementById('btnFullAmount').addEventListener('click', function () {
+        const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
+        document.getElementById('modalPayInput').value = totalSum;
+    });
+
+    document.getElementById('btnConfirmPay').addEventListener('click', function () {
+        const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
+        const payAmount = parseInt(document.getElementById('modalPayInput').value);
+
+        if (isNaN(payAmount) || payAmount <= 0) {
+            showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ပေးချေငွေပမာဏ ထည့်သွင်းပေးပါ။");
+            return;
         }
 
-        function addEntry() {
-            const dateVal = document.getElementById('entryDate').value;
-            const amountVal = parseInt(document.getElementById('entryAmount').value);
+        const todayStr = new Date().toISOString().slice(0, 10);
+        const balance = totalSum - payAmount;
 
-            if (!dateVal || isNaN(amountVal) || amountVal < 0) {
-                showInfoModal("အသိပေးချက်", "ကျေးဇူးပြု၍ ရက်စွဲနှင့် ငွေပမာဏ မှန်ကန်စွာ ထည့်သွင်းပေးပါ။");
-                return;
-            }
+        cycleArchives.unshift({
+            id: Date.now(),
+            date: todayStr,
+            type: 'PAID',
+            paidAmount: payAmount,
+            totalAmount: totalSum,
+            itemCount: entries.length,
+            remainingBalance: balance > 0 ? balance : 0,
+            details: [...entries]
+        });
 
-            entries.unshift({
-                id: Date.now(),
-                date: dateVal,
-                amount: amountVal,
-                note: 'စားပြီး'
+        const currentSubItems = [...entries];
+        entries = [];
+
+        if (balance > 0) {
+            entries.push({
+                id: Date.now() + 1,
+                date: todayStr,
+                amount: balance,
+                isDebt: true,
+                note: 'ယခင် cycle မှ မရှင်းရသေးသော အကြွေးကျန်',
+                subItems: currentSubItems
             });
-
-            saveAndRender();
-            document.getElementById('entryDate').valueAsDate = new Date();
-            document.getElementById('entryAmount').value = 2000;
         }
 
-        function showInfoModal(title, message) {
-            document.getElementById('infoModalTitle').innerText = title;
-            document.getElementById('infoModalText').innerText = message;
-            document.getElementById('infoModal').classList.add('active');
-        }
+        closePayModal();
+        saveAndRender();
+    });
 
-        document.getElementById('btnCloseInfo').addEventListener('click', function() {
-            document.getElementById('infoModal').classList.remove('active');
+    document.getElementById('btnOpenDebt').addEventListener('click', function () {
+        const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
+        const todayStr = new Date().toISOString().slice(0, 10);
+        
+        cycleArchives.unshift({
+            id: Date.now(),
+            date: todayStr,
+            type: 'DEBT',
+            totalAmount: totalSum,
+            itemCount: entries.length,
+            details: [...entries]
         });
 
-        function openPayModal() {
-            const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
-            document.getElementById('modalSubInfo').innerText = `စုစုပေါင်း ကျသင့်ငွေ ${totalSum.toLocaleString()} ကျပ် ရှိပါသည်။`;
-            document.getElementById('modalPayInput').value = totalSum;
-            document.getElementById('btnFullAmount').innerText = totalSum.toLocaleString();
-            document.getElementById('payModal').classList.add('active');
-        }
+        const currentSubItems = [...entries];
+        entries = [];
 
-        function closePayModal() {
-            document.getElementById('payModal').classList.remove('active');
-        }
-
-        document.getElementById('btnOpenPay').addEventListener('click', openPayModal);
-        document.getElementById('btnClosePay').addEventListener('click', closePayModal);
-
-        document.getElementById('btnFullAmount').addEventListener('click', function () {
-            const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
-            document.getElementById('modalPayInput').value = totalSum;
+        entries.push({
+            id: Date.now() + 1,
+            date: todayStr,
+            amount: totalSum,
+            isDebt: true,
+            note: 'ယခင် Cycle မှ မရှင်းရသေးသော အကြွေးကျန်',
+            subItems: currentSubItems
         });
 
-        document.getElementById('btnConfirmPay').addEventListener('click', function () {
-            const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
-            const payAmount = parseInt(document.getElementById('modalPayInput').value);
+        saveAndRender();
+    });
 
-            if (isNaN(payAmount) || payAmount <= 0) {
-                showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ပေးချေငွေပမာဏ ထည့်သွင်းပေးပါ။");
-                return;
-            }
+    function openSingleDebtModal(id) {
+        targetPayDebtId = id;
+        const item = entries.find(e => e.id === id);
+        if (!item) return;
 
-            const todayStr = new Date().toISOString().slice(0, 10);
-            const balance = totalSum - payAmount;
+        document.getElementById('singleDebtSubInfo').innerText = `မရှင်းရသေးသော အကြွေးကျန်: ${item.amount.toLocaleString()} ကျပ်`;
+        document.getElementById('singleDebtPayInput').value = item.amount;
+        document.getElementById('btnSingleDebtFull').innerText = item.amount.toLocaleString();
+        document.getElementById('singleDebtPayModal').classList.add('active');
+    }
+
+    function closeSingleDebtModal() {
+        document.getElementById('singleDebtPayModal').classList.remove('active');
+        targetPayDebtId = null;
+    }
+
+    document.getElementById('btnCloseSingleDebtPay').addEventListener('click', closeSingleDebtModal);
+
+    document.getElementById('btnSingleDebtFull').addEventListener('click', function () {
+        const item = entries.find(e => e.id === targetPayDebtId);
+        if (item) {
+            document.getElementById('singleDebtPayInput').value = item.amount;
+        }
+    });
+
+    document.getElementById('btnConfirmSingleDebtPay').addEventListener('click', function () {
+        const payAmount = parseInt(document.getElementById('singleDebtPayInput').value);
+        const itemIdx = entries.findIndex(e => e.id === targetPayDebtId);
+
+        if (itemIdx === -1) return;
+        const item = entries[itemIdx];
+
+        if (isNaN(payAmount) || payAmount <= 0) {
+            showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ပေးချေငွေပမာဏ ထည့်သွင်းပေးပါ။");
+            return;
+        }
+
+        const todayStr = new Date().toISOString().slice(0, 10);
+
+        if (payAmount >= item.amount) {
+            cycleArchives.unshift({
+                id: Date.now(),
+                date: todayStr,
+                type: 'PAID',
+                paidAmount: payAmount,
+                totalAmount: item.amount,
+                itemCount: 1,
+                remainingBalance: 0,
+                details: item.subItems || [item]
+            });
+            entries.splice(itemIdx, 1);
+        } else {
+            const remainingDebt = item.amount - payAmount;
 
             cycleArchives.unshift({
                 id: Date.now(),
                 date: todayStr,
                 type: 'PAID',
                 paidAmount: payAmount,
-                totalAmount: totalSum,
-                itemCount: entries.length,
-                remainingBalance: balance > 0 ? balance : 0
+                totalAmount: item.amount,
+                itemCount: 1,
+                remainingBalance: remainingDebt,
+                details: item.subItems || [item]
             });
 
-            const currentSubItems = [...entries];
-            entries = [];
-
-            if (balance > 0) {
-                entries.push({
-                    id: Date.now() + 1,
-                    date: todayStr,
-                    amount: balance,
-                    isDebt: true,
-                    note: 'ယခင် cycle မှ မရှင်းရသေးသော အကြွေးကျန်',
-                    subItems: currentSubItems
-                });
-            }
-
-            closePayModal();
-            saveAndRender();
-        });
-
-        document.getElementById('btnOpenDebt').addEventListener('click', function () {
-            const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
-            const todayStr = new Date().toISOString().slice(0, 10);
-            
-            cycleArchives.unshift({
-                id: Date.now(),
-                date: todayStr,
-                type: 'DEBT',
-                totalAmount: totalSum,
-                itemCount: entries.length
-            });
-
-            const currentSubItems = [...entries];
-            entries = [];
-
-            entries.push({
-                id: Date.now() + 1,
-                date: todayStr,
-                amount: totalSum,
-                isDebt: true,
-                note: 'ယခင် Cycle မှ မရှင်းရသေးသော အကြွေးကျန်',
-                subItems: currentSubItems
-            });
-
-            saveAndRender();
-        });
-
-        function openSingleDebtModal(id) {
-            targetPayDebtId = id;
-            const item = entries.find(e => e.id === id);
-            if (!item) return;
-
-            document.getElementById('singleDebtSubInfo').innerText = `မရှင်းရသေးသော အကြွေးကျန်: ${item.amount.toLocaleString()} ကျပ်`;
-            document.getElementById('singleDebtPayInput').value = item.amount;
-            document.getElementById('btnSingleDebtFull').innerText = item.amount.toLocaleString();
-            document.getElementById('singleDebtPayModal').classList.add('active');
+            entries[itemIdx].amount = remainingDebt;
         }
 
-        function closeSingleDebtModal() {
-            document.getElementById('singleDebtPayModal').classList.remove('active');
-            targetPayDebtId = null;
+        closeSingleDebtModal();
+        saveAndRender();
+    });
+
+    // Edit Item Modal Logic
+    function openEditModal(id, scope = 'CURRENT') {
+        targetEditItemId = id;
+        targetEditScope = scope;
+
+        let item = null;
+        if (scope === 'CURRENT') {
+            item = entries.find(e => e.id === id);
+        } else if (scope === 'DEBT_BREAKDOWN') {
+            const parentDebt = entries.find(e => e.id === activeDebtBreakdownId);
+            if (parentDebt && parentDebt.subItems) {
+                item = parentDebt.subItems.find(s => s.id === id);
+            }
         }
 
-        document.getElementById('btnCloseSingleDebtPay').addEventListener('click', closeSingleDebtModal);
+        if (!item) return;
 
-        document.getElementById('btnSingleDebtFull').addEventListener('click', function () {
-            const item = entries.find(e => e.id === targetPayDebtId);
-            if (item) {
-                document.getElementById('singleDebtPayInput').value = item.amount;
+        document.getElementById('editDateInput').value = item.date;
+        document.getElementById('editAmountInput').value = item.amount;
+        document.getElementById('editNoteInput').value = item.note || '';
+        document.getElementById('editItemModal').classList.add('active');
+    }
+
+    function closeEditModal() {
+        document.getElementById('editItemModal').classList.remove('active');
+        targetEditItemId = null;
+    }
+
+    document.getElementById('btnCloseEdit').addEventListener('click', closeEditModal);
+
+    document.getElementById('btnConfirmEdit').addEventListener('click', function() {
+        const newDate = document.getElementById('editDateInput').value;
+        const newAmount = parseInt(document.getElementById('editAmountInput').value);
+        const newNote = document.getElementById('editNoteInput').value;
+
+        if (!newDate || isNaN(newAmount) || newAmount < 0) {
+            showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ရက်စွဲနှင့် ငွေပမာဏ ထည့်သွင်းပေးပါ။");
+            return;
+        }
+
+        if (targetEditScope === 'CURRENT') {
+            const itemIdx = entries.findIndex(e => e.id === targetEditItemId);
+            if (itemIdx !== -1) {
+                entries[itemIdx].date = newDate;
+                entries[itemIdx].amount = newAmount;
+                entries[itemIdx].note = newNote || 'ပြင်ဆင်ပြီး';
             }
-        });
+        } else if (targetEditScope === 'DEBT_BREAKDOWN') {
+            const parentDebtIdx = entries.findIndex(e => e.id === activeDebtBreakdownId);
+            if (parentDebtIdx !== -1 && entries[parentDebtIdx].subItems) {
+                const subIdx = entries[parentDebtIdx].subItems.findIndex(s => s.id === targetEditItemId);
+                if (subIdx !== -1) {
+                    entries[parentDebtIdx].subItems[subIdx].date = newDate;
+                    entries[parentDebtIdx].subItems[subIdx].amount = newAmount;
+                    entries[parentDebtIdx].subItems[subIdx].note = newNote || 'ပြင်ဆင်ပြီး';
 
-        document.getElementById('btnConfirmSingleDebtPay').addEventListener('click', function () {
-            const payAmount = parseInt(document.getElementById('singleDebtPayInput').value);
-            const itemIdx = entries.findIndex(e => e.id === targetPayDebtId);
-
-            if (itemIdx === -1) return;
-            const item = entries[itemIdx];
-
-            if (isNaN(payAmount) || payAmount <= 0) {
-                showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ပေးချေငွေပမာဏ ထည့်သွင်းပေးပါ။");
-                return;
+                    const recalculatedSum = entries[parentDebtIdx].subItems.reduce((sum, s) => sum + s.amount, 0);
+                    entries[parentDebtIdx].amount = recalculatedSum;
+                }
             }
+        }
 
-            const todayStr = new Date().toISOString().slice(0, 10);
+        closeEditModal();
+        saveAndRender();
 
-            if (payAmount >= item.amount) {
-                cycleArchives.unshift({
-                    id: Date.now(),
-                    date: todayStr,
-                    type: 'PAID',
-                    paidAmount: payAmount,
-                    totalAmount: item.amount,
-                    itemCount: 1,
-                    remainingBalance: 0
-                });
+        if (targetEditScope === 'DEBT_BREAKDOWN' && activeDebtBreakdownId) {
+            renderDebtBreakdownModal(activeDebtBreakdownId);
+        }
+    });
+
+    // Delete Item Logic
+    document.getElementById('btnDeleteCurrentEditItem').addEventListener('click', function() {
+        if (targetEditScope === 'CURRENT') {
+            const itemIdx = entries.findIndex(e => e.id === targetEditItemId);
+            if (itemIdx !== -1) {
                 entries.splice(itemIdx, 1);
-            } else {
-                const remainingDebt = item.amount - payAmount;
+            }
+        } else if (targetEditScope === 'DEBT_BREAKDOWN') {
+            const parentDebtIdx = entries.findIndex(e => e.id === activeDebtBreakdownId);
+            if (parentDebtIdx !== -1 && entries[parentDebtIdx].subItems) {
+                const subIdx = entries[parentDebtIdx].subItems.findIndex(s => s.id === targetEditItemId);
+                if (subIdx !== -1) {
+                    entries[parentDebtIdx].subItems.splice(subIdx, 1);
 
-                cycleArchives.unshift({
-                    id: Date.now(),
-                    date: todayStr,
-                    type: 'PAID',
-                    paidAmount: payAmount,
-                    totalAmount: item.amount,
-                    itemCount: 1,
-                    remainingBalance: remainingDebt
+                    const recalculatedSum = entries[parentDebtIdx].subItems.reduce((sum, s) => sum + s.amount, 0);
+                    entries[parentDebtIdx].amount = recalculatedSum;
+
+                    if (entries[parentDebtIdx].subItems.length === 0 || recalculatedSum <= 0) {
+                        entries.splice(parentDebtIdx, 1);
+                        closeBreakdownModal();
+                    }
+                }
+            }
+        }
+
+        closeEditModal();
+        saveAndRender();
+
+        if (targetEditScope === 'DEBT_BREAKDOWN' && activeDebtBreakdownId && entries.some(e => e.id === activeDebtBreakdownId)) {
+            renderDebtBreakdownModal(activeDebtBreakdownId);
+        }
+    });
+
+    // Breakdown Modal Logic
+    function closeBreakdownModal() {
+        document.getElementById('debtBreakdownModal').classList.remove('active');
+        activeDebtBreakdownId = null;
+    }
+
+    document.getElementById('btnCloseBreakdown').addEventListener('click', closeBreakdownModal);
+
+    function renderDebtBreakdownModal(debtId) {
+        activeDebtBreakdownId = debtId;
+        const parentDebt = entries.find(e => e.id === debtId);
+        const listContainer = document.getElementById('breakdownList');
+
+        if (!parentDebt || !parentDebt.subItems || parentDebt.subItems.length === 0) {
+            listContainer.innerHTML = '<div class="empty-state">အသေးစိတ် မှတ်တမ်းများ မရှိပါ။</div>';
+        } else {
+            listContainer.innerHTML = parentDebt.subItems.map(sub => `
+                <div class="history-item">
+                    <div>
+                        <div class="item-date">${sub.date}</div>
+                        <div class="item-sub">${sub.note || 'စားပြီး'}</div>
+                    </div>
+                    <div class="item-right">
+                        <span class="item-amount">${sub.amount.toLocaleString()} ကျပ်</span>
+                        <button class="btn-action btn-edit btn-edit-sub" data-id="${sub.id}">ပြင်ရန်</button>
+                    </div>
+                </div>
+            `).join('');
+
+            listContainer.querySelectorAll('.btn-edit-sub').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    const subId = Number(this.getAttribute('data-id'));
+                    openEditModal(subId, 'DEBT_BREAKDOWN');
                 });
-
-                entries[itemIdx].amount = remainingDebt;
-            }
-
-            closeSingleDebtModal();
-            saveAndRender();
-        });
-
-        // Edit Item Modal Logic
-        function openEditModal(id, scope = 'CURRENT') {
-            targetEditItemId = id;
-            targetEditScope = scope;
-
-            let item = null;
-            if (scope === 'CURRENT') {
-                item = entries.find(e => e.id === id);
-            } else if (scope === 'DEBT_BREAKDOWN') {
-                const parentDebt = entries.find(e => e.id === activeDebtBreakdownId);
-                if (parentDebt && parentDebt.subItems) {
-                    item = parentDebt.subItems.find(s => s.id === id);
-                }
-            }
-
-            if (!item) return;
-
-            document.getElementById('editDateInput').value = item.date;
-            document.getElementById('editAmountInput').value = item.amount;
-            document.getElementById('editNoteInput').value = item.note || '';
-            document.getElementById('editItemModal').classList.add('active');
+            });
         }
 
-        function closeEditModal() {
-            document.getElementById('editItemModal').classList.remove('active');
-            targetEditItemId = null;
-        }
+        document.getElementById('debtBreakdownModal').classList.add('active');
+    }
 
-        document.getElementById('btnCloseEdit').addEventListener('click', closeEditModal);
-
-        document.getElementById('btnConfirmEdit').addEventListener('click', function() {
-            const newDate = document.getElementById('editDateInput').value;
-            const newAmount = parseInt(document.getElementById('editAmountInput').value);
-            const newNote = document.getElementById('editNoteInput').value;
-
-            if (!newDate || isNaN(newAmount) || newAmount < 0) {
-                showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော ရက်စွဲနှင့် ငွေပမာဏ ထည့်သွင်းပေးပါ။");
-                return;
-            }
-
-            if (targetEditScope === 'CURRENT') {
-                const itemIdx = entries.findIndex(e => e.id === targetEditItemId);
-                if (itemIdx !== -1) {
-                    entries[itemIdx].date = newDate;
-                    entries[itemIdx].amount = newAmount;
-                    entries[itemIdx].note = newNote || 'ပြင်ဆင်ပြီး';
-                }
-            } else if (targetEditScope === 'DEBT_BREAKDOWN') {
-                const parentDebtIdx = entries.findIndex(e => e.id === activeDebtBreakdownId);
-                if (parentDebtIdx !== -1 && entries[parentDebtIdx].subItems) {
-                    const subIdx = entries[parentDebtIdx].subItems.findIndex(s => s.id === targetEditItemId);
-                    if (subIdx !== -1) {
-                        entries[parentDebtIdx].subItems[subIdx].date = newDate;
-                        entries[parentDebtIdx].subItems[subIdx].amount = newAmount;
-                        entries[parentDebtIdx].subItems[subIdx].note = newNote || 'ပြင်ဆင်ပြီး';
-
-                        // Recalculate parent debt amount
-                        const recalculatedSum = entries[parentDebtIdx].subItems.reduce((sum, s) => sum + s.amount, 0);
-                        entries[parentDebtIdx].amount = recalculatedSum;
-                    }
-                }
-            }
-
-            closeEditModal();
-            saveAndRender();
-
-            if (targetEditScope === 'DEBT_BREAKDOWN' && activeDebtBreakdownId) {
-                renderDebtBreakdownModal(activeDebtBreakdownId);
-            }
-        });
-
-        // Delete Item Logic
-        document.getElementById('btnDeleteCurrentEditItem').addEventListener('click', function() {
-            if (targetEditScope === 'CURRENT') {
-                const itemIdx = entries.findIndex(e => e.id === targetEditItemId);
-                if (itemIdx !== -1) {
-                    entries.splice(itemIdx, 1);
-                }
-            } else if (targetEditScope === 'DEBT_BREAKDOWN') {
-                const parentDebtIdx = entries.findIndex(e => e.id === activeDebtBreakdownId);
-                if (parentDebtIdx !== -1 && entries[parentDebtIdx].subItems) {
-                    const subIdx = entries[parentDebtIdx].subItems.findIndex(s => s.id === targetEditItemId);
-                    if (subIdx !== -1) {
-                        entries[parentDebtIdx].subItems.splice(subIdx, 1);
-
-                        // Recalculate parent debt amount
-                        const recalculatedSum = entries[parentDebtIdx].subItems.reduce((sum, s) => sum + s.amount, 0);
-                        entries[parentDebtIdx].amount = recalculatedSum;
-
-                        if (entries[parentDebtIdx].subItems.length === 0 || recalculatedSum <= 0) {
-                            entries.splice(parentDebtIdx, 1);
-                            closeBreakdownModal();
-                        }
-                    }
-                }
-            }
-
-            closeEditModal();
-            saveAndRender();
-
-            if (targetEditScope === 'DEBT_BREAKDOWN' && activeDebtBreakdownId && entries.some(e => e.id === activeDebtBreakdownId)) {
-                renderDebtBreakdownModal(activeDebtBreakdownId);
-            }
-        });
-
-        // Breakdown Modal Logic
-        function renderDebtBreakdownModal(debtId) {
-            activeDebtBreakdownId = debtId;
-            const parentDebt = entries.find(e => e.id === debtId);
-            const listContainer = document.getElementById('breakdownList');
-
-            if (!parentDebt || !parentDebt.subItems || parentDebt.subItems.length === 0) {
-                listContainer.innerHTML = '<div class="empty-state">အသေးစိတ် မှတ်တမ်းများ မရှိပါ။</div>';
-                document.getElementById('debtBreakdownSub').innerText = `မရှင်းရသေးသော အကြွေးကျန်: ${parentDebt ? parentDebt.amount.toLocaleString() : 0} ကျပ်`;
-                return;
-            }
-
-            document.getElementById('debtBreakdownSub').innerText = `စုစုပေါင်း အကြွေးကျန်: ${parentDebt.amount.toLocaleString()} ကျပ် (${parentDebt.subItems.length} ခု)`;
-
-            listContainer.innerHTML = parentDebt.subItems.map(item => `
+    // Archive Cycle Details Modal Logic
+    function openArchiveDetailModal(archiveId) {
+        const archive = cycleArchives.find(a => a.id === archiveId);
+        const container = document.getElementById('archiveDetailList');
+        
+        if (!archive || !archive.details || archive.details.length === 0) {
+            container.innerHTML = '<div class="empty-state">အသေးစိတ် စာရင်းမှတ်တမ်း မရှိပါ။</div>';
+        } else {
+            container.innerHTML = archive.details.map(item => `
                 <div class="history-item">
                     <div>
                         <div class="item-date">${item.date}</div>
                         <div class="item-sub">${item.note || 'စားပြီး'}</div>
                     </div>
                     <div class="item-right">
-                        <span class="item-amount">+${item.amount.toLocaleString()} ကျပ်</span>
-                        <button class="btn-action btn-edit-sub" data-id="${item.id}">ပြင်ရန်</button>
+                        <span class="item-amount">${item.amount ? item.amount.toLocaleString() : 0} ကျပ်</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+        document.getElementById('archiveDetailModal').classList.add('active');
+    }
+
+    document.getElementById('btnCloseArchiveDetail').addEventListener('click', function() {
+        document.getElementById('archiveDetailModal').classList.remove('active');
+    });
+
+    // Quick Amounts
+    document.querySelectorAll('.quick-amounts .btn-quick[data-amount]').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const amt = this.getAttribute('data-amount');
+            if (this.classList.contains('modal-quick')) {
+                document.getElementById('modalPayInput').value = amt;
+            } else if (this.classList.contains('single-debt-quick')) {
+                document.getElementById('singleDebtPayInput').value = amt;
+            } else {
+                document.getElementById('entryAmount').value = amt;
+            }
+        });
+    });
+
+    // Main Render Function
+    function render() {
+        const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
+        const percent = Math.min(Math.round((totalSum / TARGET) * 100), 100);
+
+        document.getElementById('totalDisplay').innerText = `${totalSum.toLocaleString()} ကျပ်`;
+        document.getElementById('progressBar').style.width = `${percent}%`;
+        document.getElementById('eatenDaysCount').innerText = `မှတ်တမ်း: ${entries.length} ခု`;
+        document.getElementById('percentDisplay').innerText = `${percent}%`;
+
+        const alertBanner = document.getElementById('alertBanner');
+        if (totalSum >= TARGET) {
+            alertBanner.classList.add('active');
+        } else {
+            alertBanner.classList.remove('active');
+        }
+
+        // Current Cycle List
+        const historyList = document.getElementById('historyList');
+        if (entries.length === 0) {
+            historyList.innerHTML = '<div class="empty-state">မှတ်တမ်းများ မရှိသေးပါ။</div>';
+        } else {
+            historyList.innerHTML = entries.map(item => `
+                <div class="history-item ${item.isDebt ? 'is-debt' : ''}">
+                    <div>
+                        <div class="item-date">${item.date}</div>
+                        <div class="item-sub">${item.note || 'စားပြီး'}</div>
+                    </div>
+                    <div class="item-right">
+                        <span class="item-amount ${item.isDebt ? 'debt-text' : ''}">${item.amount.toLocaleString()} ကျပ်</span>
+                        ${item.isDebt ? `
+                            <button class="btn-action btn-edit btn-breakdown" data-id="${item.id}">ပြင်ရန် / အသေးစိတ်</button>
+                            <button class="btn-action btn-pay-single" data-id="${item.id}">ရှင်းမည်</button>
+                        ` : `
+                            <button class="btn-action btn-edit btn-edit-current" data-id="${item.id}">ပြင်ရန်</button>
+                        `}
                     </div>
                 </div>
             `).join('');
 
-            document.querySelectorAll('.btn-edit-sub').forEach(btn => {
+            historyList.querySelectorAll('.btn-edit-current').forEach(btn => {
                 btn.addEventListener('click', function () {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    openEditModal(id, 'DEBT_BREAKDOWN');
+                    openEditModal(Number(this.getAttribute('data-id')), 'CURRENT');
+                });
+            });
+
+            historyList.querySelectorAll('.btn-breakdown').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    renderDebtBreakdownModal(Number(this.getAttribute('data-id')));
+                });
+            });
+
+            historyList.querySelectorAll('.btn-pay-single').forEach(btn => {
+                btn.addEventListener('click', function () {
+                    openSingleDebtModal(Number(this.getAttribute('data-id')));
                 });
             });
         }
 
-        function openBreakdownModal(debtId) {
-            renderDebtBreakdownModal(debtId);
-            document.getElementById('debtBreakdownModal').classList.add('active');
-        }
-
-        function closeBreakdownModal() {
-            document.getElementById('debtBreakdownModal').classList.remove('active');
-            activeDebtBreakdownId = null;
-        }
-
-        document.getElementById('btnCloseBreakdown').addEventListener('click', closeBreakdownModal);
-
-        document.getElementById('btnAddEntry').addEventListener('click', addEntry);
-
-        document.querySelectorAll('.quick-amounts .btn-quick[data-amount]').forEach(btn => {
-            btn.addEventListener('click', function () {
-                const amt = this.getAttribute('data-amount');
-                if (this.classList.contains('modal-quick')) {
-                    document.getElementById('modalPayInput').value = amt;
-                } else if (this.classList.contains('single-debt-quick')) {
-                    document.getElementById('singleDebtPayInput').value = amt;
-                } else {
-                    document.getElementById('entryAmount').value = amt;
-                }
-            });
-        });
-
-        function render() {
-            const historyList = document.getElementById('historyList');
-            const archiveHistoryList = document.getElementById('archiveHistoryList');
-            const totalDisplay = document.getElementById('totalDisplay');
-            const progressBar = document.getElementById('progressBar');
-            const percentDisplay = document.getElementById('percentDisplay');
-            const eatenDaysCount = document.getElementById('eatenDaysCount');
-            const alertBanner = document.getElementById('alertBanner');
-            const alertSub = document.getElementById('alertSub');
-
-            const totalSum = entries.reduce((sum, item) => sum + item.amount, 0);
-            totalDisplay.innerText = totalSum.toLocaleString() + " ကျပ်";
-
-            const percent = Math.min(100, Math.round((totalSum / TARGET) * 100));
-            progressBar.style.width = percent + "%";
-            percentDisplay.innerText = percent + "%";
-
-            if (totalSum >= TARGET) {
-                progressBar.style.backgroundColor = "var(--ios-warning)";
-                alertBanner.classList.add('active');
-                alertSub.innerText = `စုစုပေါင်း ${totalSum.toLocaleString()} ကျပ် ရှိနေပါသည်။ ငွေပေးချေမည် သို့မဟုတ် အကြွေးအဖြစ် နောက် Cycle သို့ သယ်ဆောင်မည်ကို ရွေးပါ:`;
-            } else {
-                progressBar.style.backgroundColor = "var(--ios-primary)";
-                alertBanner.classList.remove('active');
-            }
-
-            eatenDaysCount.innerText = `မှတ်တမ်း: ${entries.length} ခု`;
-
-            if (entries.length === 0) {
-                historyList.innerHTML = '<div class="empty-state">လက်ရှိ Cycle တွင် မှတ်တမ်းများ မရှိသေးပါ။</div>';
-            } else {
-                historyList.innerHTML = entries.map(item => `
-                    <div class="history-item ${item.isDebt ? 'is-debt' : ''}">
-                        <div>
-                            <div class="item-date">${item.date}</div>
-                            <div class="item-sub">${item.note || 'စားပြီး'}</div>
-                        </div>
-                        <div class="item-right">
-                            <span class="item-amount ${item.isDebt ? 'debt-text' : ''}">+${item.amount.toLocaleString()} ကျပ်</span>
-                            ${item.isDebt 
-                                ? `<button class="btn-action btn-edit-debt-parent" data-id="${item.id}">ပြင်ရန် / အသေးစိတ်</button>
-                                   <button class="btn-action btn-pay-single" data-id="${item.id}">ငွေရှင်းမည်</button>`
-                                : `<button class="btn-action btn-edit" data-id="${item.id}">ပြင်ရန်</button>`
-                            }
-                        </div>
+        // Archive List
+        const archiveList = document.getElementById('archiveHistoryList');
+        if (cycleArchives.length === 0) {
+            archiveList.innerHTML = '<div class="empty-state">စာရင်းဟောင်း မှတ်တမ်းများ မရှိသေးပါ။</div>';
+        } else {
+            archiveList.innerHTML = cycleArchives.map(archive => `
+                <div class="archive-card ${archive.type === 'PAID' ? 'paid-card' : 'debt-card'}">
+                    <div class="archive-header">
+                        <span>${archive.type === 'PAID' ? '✅ ရှင်းပြီး စာရင်း' : '📌 အကြွေးမှတ်ခဲ့သော စာရင်း'}</span>
+                        <span style="font-size:0.8rem; color:var(--ios-subtext);">${archive.date}</span>
                     </div>
-                `).join('');
-            }
+                    <div class="archive-details">
+                        <div>စုစုပေါင်း ကျသင့်ငွေ: <b>${archive.totalAmount ? archive.totalAmount.toLocaleString() : 0} ကျပ်</b></div>
+                        ${archive.type === 'PAID' ? `<div>ပေးချေခဲ့သော ပမာဏ: <b>${archive.paidAmount ? archive.paidAmount.toLocaleString() : 0} ကျပ်</b></div>` : ''}
+                        ${archive.remainingBalance > 0 ? `<div style="color:var(--ios-danger);">ကျန်ရှိအကြွေး: <b>${archive.remainingBalance.toLocaleString()} ကျပ်</b></div>` : ''}
+                    </div>
+                    <div style="margin-top:8px; text-align:right;">
+                        <button class="btn-action btn-edit btn-view-archive" data-id="${archive.id}">🔎 အသေးစိတ်ကြည့်မည်</button>
+                    </div>
+                </div>
+            `).join('');
 
-            if (cycleArchives.length === 0) {
-                archiveHistoryList.innerHTML = '<div class="empty-state">စာရင်းဟောင်း မှတ်တမ်းများ မရှိသေးပါ။</div>';
-            } else {
-                archiveHistoryList.innerHTML = cycleArchives.map(item => {
-                    if (item.type === 'PAID') {
-                        return `
-                            <div class="archive-card paid-card">
-                                <div class="archive-header">
-                                    <span>💵 ${item.paidAmount.toLocaleString()} ကျပ် ပေးချေခဲ့ပြီး</span>
-                                </div>
-                                <div class="archive-details">
-                                    <b>ရက်စွဲ:</b> ${item.date}<br>
-                                    <b>စုစုပေါင်း ကျသင့်ငွေ:</b> ${item.totalAmount.toLocaleString()} ကျပ် (${item.itemCount} ကြိမ်)<br>
-                                    ${item.remainingBalance > 0 
-                                        ? `<b style="color: var(--ios-danger);">မရှင်းရသေးသော အကြွေးကျန်:</b> ${item.remainingBalance.toLocaleString()} ကျပ်` 
-                                        : '<b>အခြေအနေ:</b> အပြည့်အဝ ငွေရှင်းပြီး'}
-                                </div>
-                            </div>
-                        `;
-                    } else {
-                        return `
-                            <div class="archive-card debt-card">
-                                <div class="archive-header">
-                                    <span>📌 အကြွေးအဖြစ် သယ်ဆောင်ခဲ့သည်</span>
-                                </div>
-                                <div class="archive-details">
-                                    <b>ရက်စွဲ:</b> ${item.date}<br>
-                                    <b>မရှင်းရသေးသော အကြွေးပမာဏ:</b> ${item.totalAmount.toLocaleString()} ကျပ် (${item.itemCount} ကြိမ်)<br>
-                                    <i>*ဒီပမာဏကို နောက် Cycle အစသို့ ပေါင်းထည့်လိုက်ပါသည်။</i>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }).join('');
-            }
-
-            document.querySelectorAll('.btn-pay-single').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    openSingleDebtModal(id);
-                });
-            });
-
-            document.querySelectorAll('.btn-edit').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    openEditModal(id, 'CURRENT');
-                });
-            });
-
-            document.querySelectorAll('.btn-edit-debt-parent').forEach(btn => {
-                btn.addEventListener('click', function () {
-                    const id = parseInt(this.getAttribute('data-id'));
-                    openBreakdownModal(id);
+            archiveList.querySelectorAll('.btn-view-archive').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    openArchiveDetailModal(Number(this.getAttribute('data-id')));
                 });
             });
         }
+    }
 
-        render();
-    });
+    document.getElementById('btnAddEntry').addEventListener('click', addEntry);
+
+    // Initial Load Render
+    render();
+});
 </script>
-
 </body>
 </html>
