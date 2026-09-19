@@ -212,7 +212,7 @@
         .btn-quick {
             background: transparent;
             border: none;
-            border-radius: 9px;
+            border-radius: 99px;
             padding: 8px 0;
             font-size: 0.85rem;
             font-weight: 600;
@@ -352,11 +352,6 @@
             color: var(--ios-primary);
         }
 
-        .btn-delete-small {
-            background: rgba(255, 59, 48, 0.12);
-            color: var(--ios-danger);
-        }
-
         .empty-state {
             text-align: center;
             color: var(--ios-subtext);
@@ -392,7 +387,7 @@
             border-top-right-radius: 20px;
             padding: 20px 16px 28px 16px;
             border-top: 1px solid var(--ios-border);
-            max-height: 90vh; /* Screen အောက်ခြေ မြင်ရလွယ်စေရန် */
+            max-height: 90vh;
             overflow-y: auto;
             box-sizing: border-box;
         }
@@ -435,13 +430,13 @@
     <div class="card">
         <div class="header">
             <div class="title">🍱 စားသောက်စရိတ် Tracker</div>
-            <div class="subtitle">၁၀,၀၀၀ ကျပ် ပြည့်တိုင်း ငွေရှင်းရန် အသိပေးမည်</div>
+            <div class="subtitle" id="subTitleText">သတ်မှတ် ပမာဏ ပြည့်တိုင်း ငွေရှင်းရန် အသိပေးမည်</div>
         </div>
 
         <div class="progress-box">
             <div class="progress-header">
                 <div class="amount-current" id="totalDisplay">0 ကျပ်</div>
-                <div class="amount-target">Target: 10,000 ကျပ်</div>
+                <div class="amount-target" id="targetDisplay">Target: 10,000 ကျပ်</div>
             </div>
 
             <div class="progress-bar-bg">
@@ -455,13 +450,23 @@
         </div>
 
         <div class="alert-banner" id="alertBanner">
-            <div class="alert-title">⚠️ ၁၀,၀၀၀ ကျပ် ပြည့်သွားပါပြီ!</div>
+            <div class="alert-title" id="alertTitleText">⚠️ Target ပြည့်သွားပါပြီ!</div>
             <div class="alert-sub" id="alertSub">ပေးချေလိုသော ပမာဏကို ရွေးချယ်/ထည့်သွင်း၍ စာရင်းရှင်းနိုင်ပါသည်။</div>
             <div class="alert-actions">
                 <button class="btn-primary btn-success" id="btnOpenPay">💵 ငွေပေးချေမည်</button>
                 <button class="btn-primary btn-warning" id="btnOpenDebt">📌 မပေးသေးပါ (အကြွေးမှတ်မည်)</button>
             </div>
         </div>
+    </div>
+
+    <!-- Target Amount ပြောင်းလဲရန် Card -->
+    <div class="card">
+        <div class="title" style="font-size: 0.95rem; justify-content: flex-start; margin-bottom: 10px;">🎯 Target Amount ပြင်ရန်</div>
+        <div class="form-group">
+            <label for="targetAmountInput">သတ်မှတ်မည့် Target ပမာဏ (ကျပ်)</label>
+            <input type="number" id="targetAmountInput" placeholder="10000">
+        </div>
+        <button class="btn-primary btn-secondary" id="btnUpdateTarget">Target ပမာဏ ပြောင်းမည်</button>
     </div>
 
     <div class="card">
@@ -552,7 +557,7 @@
     </div>
 </div>
 
-<!-- Modal Edit Item (Highest z-index) -->
+<!-- Modal Edit Item -->
 <div class="modal-overlay" id="editItemModal">
     <div class="modal-card">
         <div class="modal-header">✏️ မှတ်တမ်း ပြင်ဆင်ရန်</div>
@@ -626,7 +631,7 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function () {
-    const TARGET = 10000;
+    let TARGET = 10000;
     let entries = [];
     let cycleArchives = [];
     let targetPayDebtId = null;
@@ -637,21 +642,43 @@ document.addEventListener("DOMContentLoaded", function () {
     try {
         entries = JSON.parse(localStorage.getItem('foodEntries')) || [];
         cycleArchives = JSON.parse(localStorage.getItem('cycleArchives')) || [];
+        
+        const savedTarget = localStorage.getItem('foodTargetAmount');
+        if (savedTarget) {
+            TARGET = parseInt(savedTarget);
+        }
     } catch (e) {
         entries = [];
         cycleArchives = [];
+        TARGET = 10000;
     }
 
     const entryDate = document.getElementById('entryDate');
     if (entryDate) entryDate.valueAsDate = new Date();
 
+    const targetInput = document.getElementById('targetAmountInput');
+    if (targetInput) targetInput.value = TARGET;
+
     function saveAndRender() {
         try {
             localStorage.setItem('foodEntries', JSON.stringify(entries));
             localStorage.setItem('cycleArchives', JSON.stringify(cycleArchives));
+            localStorage.setItem('foodTargetAmount', TARGET);
         } catch(e) {}
         render();
     }
+
+    // Target Amount Update Listener
+    document.getElementById('btnUpdateTarget').addEventListener('click', function() {
+        const newTarget = parseInt(document.getElementById('targetAmountInput').value);
+        if (isNaN(newTarget) || newTarget <= 0) {
+            showInfoModal("မှားယွင်းမှု", "ကျေးဇူးပြု၍ မှန်ကန်သော Target ပမာဏ ထည့်သွင်းပေးပါ။");
+            return;
+        }
+        TARGET = newTarget;
+        saveAndRender();
+        showInfoModal("အောင်မြင်ပါသည်", `Target ပမာဏကို ${TARGET.toLocaleString()} ကျပ်သို့ ပြောင်းလဲလိုက်ပါပြီ။`);
+    });
 
     function addEntry() {
         const dateVal = document.getElementById('entryDate').value;
@@ -1035,6 +1062,10 @@ document.addEventListener("DOMContentLoaded", function () {
         const percent = Math.min(Math.round((totalSum / TARGET) * 100), 100);
 
         document.getElementById('totalDisplay').innerText = `${totalSum.toLocaleString()} ကျပ်`;
+        document.getElementById('targetDisplay').innerText = `Target: ${TARGET.toLocaleString()} ကျပ်`;
+        document.getElementById('subTitleText').innerText = `${TARGET.toLocaleString()} ကျပ် ပြည့်တိုင်း ငွေရှင်းရန် အသိပေးမည်`;
+        document.getElementById('alertTitleText').innerText = `⚠️ ${TARGET.toLocaleString()} ကျပ် ပြည့်သွားပါပြီ!`;
+
         document.getElementById('progressBar').style.width = `${percent}%`;
         document.getElementById('eatenDaysCount').innerText = `မှတ်တမ်း: ${entries.length} ခု`;
         document.getElementById('percentDisplay').innerText = `${percent}%`;
